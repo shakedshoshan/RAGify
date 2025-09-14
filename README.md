@@ -1,267 +1,83 @@
-# RAGify
+# RAGify - Automated RAG-as-a-Service Platform
 
-A modern RAG (Retrieval-Augmented Generation) application built with NestJS backend and deployed on AWS infrastructure using Terraform.
+## Project Overview
 
-## 🚀 Overview
+RAGify is a platform designed to simplify and automate the implementation of Retrieval-Augmented Generation (RAG) architectures. By providing an intuitive user interface, RAGify removes the technical barriers to entry, allowing users to transform their private data into a powerful, conversational API with just a few clicks.
 
-RAGify is a scalable document processing and question-answering system that leverages RAG technology to provide intelligent responses based on your document corpus. The application is designed for production use with enterprise-grade infrastructure.
+The platform handles the entire RAG pipeline automatically: from data ingestion and processing to vector embedding and API generation. The result is a dedicated, ready-to-use API endpoint that can be integrated into any application, enabling powerful, context-aware AI interactions.
 
-## 🏗️ Architecture
+## Key Features
 
-The project consists of two main components:
+### User & Project Management
+A dedicated user dashboard to manage multiple RAG projects, view usage statistics, and access unique API keys.
 
-### Backend (NestJS)
-- **Framework**: NestJS with TypeScript
-- **Port**: 3000
-- **Features**: RESTful API, health checks, document processing
-- **Deployment**: Containerized and deployed on AWS ECS Fargate
+### Diverse Data Ingestion
+Easily upload files (PDF, DOCX, TXT), crawl websites via URL, integrate with external APIs (e.g., Notion, Slack), or simply paste text directly into the platform.
 
-### Infrastructure (Terraform)
-- **Cloud Provider**: AWS
-- **Compute**: ECS Fargate with Application Load Balancer
-- **Database**: RDS PostgreSQL
-- **Storage**: S3 bucket for file storage
-- **Networking**: VPC with public/private subnets
-- **Security**: IAM roles, security groups, encrypted storage
+### Custom Persona Configuration
+Define the "personality" of your RAG model, including its tone, response style, and specific instructions, to ensure a tailored user experience.
 
-## 📁 Project Structure
+### Automated Backend Pipeline
+The system automatically handles the complex backend processes:
 
-```
-RAGify/
-├── backend/                 # NestJS application
-│   ├── src/                # Source code
-│   ├── test/               # Test files
-│   ├── dist/               # Compiled JavaScript
-│   └── package.json        # Dependencies and scripts
-├── terraform/              # Infrastructure as Code
-│   ├── main.tf            # Main configuration
-│   ├── vpc.tf             # VPC and networking
-│   ├── ecs.tf             # ECS and load balancer
-│   ├── rds.tf             # Database configuration
-│   ├── s3.tf              # File storage
-│   ├── iam.tf             # IAM roles and policies
-│   └── variables.tf       # Configuration variables
-└── README.md              # This file
-```
+- **Parsing & Chunking**: Breaking down raw data into manageable, relevant text chunks.
+- **Embedding**: Converting each chunk into a numerical vector using a state-of-the-art embedding model.
+- **Vector Database Storage**: Storing vectors in a dedicated, high-performance vector database for efficient semantic search.
 
-## 🛠️ Prerequisites
+### Instant API Generation
+Upon completion of the data processing, a unique API endpoint and key are automatically generated for immediate use.
 
-Before you begin, ensure you have the following installed:
+### Comprehensive API Usage
+The platform provides example code in multiple languages (Python, JavaScript, etc.) to demonstrate how to query the generated API. The API handles the entire RAG workflow, from vector search to LLM response generation.
 
-- **Node.js** (v18 or higher)
-- **npm** or **yarn**
-- **Terraform** (v1.0 or higher)
-- **AWS CLI** (configured with appropriate credentials)
-- **Docker** (for containerization)
+## Technology Stack
 
-## 🚀 Quick Start
+### Backend
+- **Framework**: NestJS (TypeScript)
+- **API**: RESTful API for all platform functionalities.
 
-### 1. Clone the Repository
+### Frontend
+- **Framework**: Built with React, Next.js, or Vue.js to provide a modern and responsive user interface.
 
+### Databases
+- **Standard Database**: PostgreSQL or MongoDB for managing user accounts, project metadata, and API keys.
+- **Vector Database**: Pinecone, Weaviate, or ChromaDB for efficient storage and retrieval of vector embeddings.
+
+### Cloud Infrastructure
+- **Provider**: AWS
+- **Infrastructure as Code**: Terraform is used to provision and manage the entire cloud environment, ensuring consistency and reproducibility.
+
+### Models
+- **LLMs & Embedding Models**: Integration with various large language models and embedding models, including OpenAI, Anthropic, and Hugging Face.
+
+## Getting Started
+
+To get started with RAGify, follow these steps:
+
+### 1. Clone the repository
 ```bash
-git clone https://github.com/shakedshoshan/RAGify.git
+git clone https://github.com/your-username/RAGify.git
 cd RAGify
 ```
 
-### 2. Backend Setup
-
+### 2. Set up the Backend
+Navigate to the backend directory and install dependencies.
 ```bash
 cd backend
 npm install
-npm run build
 ```
+Configure your environment variables (database connection strings, API keys, etc.).
 
-### 3. Infrastructure Deployment
-
+### 3. Set up the Frontend
+Navigate to the frontend directory and install dependencies.
 ```bash
-cd ../terraform
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your configuration
-terraform init
-terraform plan
-terraform apply
+cd frontend
+npm install
 ```
 
-### 4. Run the Application
+### 4. Launch the Application
+Start both the backend and frontend servers.
 
-#### Development Mode
-```bash
-cd backend
-npm run dev
-```
+## License
 
-#### Production Mode
-```bash
-cd backend
-npm run build
-npm run start:prod
-```
-
-## 🔧 Configuration
-
-### Backend Configuration
-
-The backend uses environment variables for configuration. Create a `.env` file in the `backend` directory:
-
-```env
-PORT=3000
-NODE_ENV=development
-DATABASE_URL=postgresql://username:password@host:port/database
-AWS_REGION=us-west-2
-S3_BUCKET_NAME=your-bucket-name
-```
-
-### Terraform Configuration
-
-Copy `terraform.tfvars.example` to `terraform.tfvars` and customize:
-
-```hcl
-aws_region      = "us-west-2"
-project_name    = "ragify"
-environment     = "dev"
-vpc_cidr        = "10.0.0.0/16"
-db_username     = "ragify_admin"
-db_password     = "your-secure-password"
-s3_bucket_name  = "your-unique-bucket-name"
-```
-
-## 🏗️ Infrastructure Details
-
-### AWS Resources Created
-
-- **VPC**: Custom VPC with public and private subnets across 2 AZs
-- **ECS Cluster**: Fargate cluster for containerized applications
-- **Application Load Balancer**: Internet-facing ALB with health checks
-- **RDS PostgreSQL**: Managed database with encryption and backups
-- **S3 Bucket**: Encrypted file storage with lifecycle policies
-- **IAM Roles**: Least-privilege access for ECS tasks and S3
-- **CloudWatch**: Logging and monitoring
-
-### Security Features
-
-- ✅ VPC with private subnets for database
-- ✅ Security groups with minimal required access
-- ✅ Encrypted RDS storage
-- ✅ S3 bucket encryption
-- ✅ IAM roles with least privilege
-- ✅ No public database access
-
-## 📊 API Endpoints
-
-The backend provides the following endpoints:
-
-- `GET /` - Welcome message
-- `GET /health` - Health check endpoint
-- `POST /api/documents` - Upload documents for processing
-- `GET /api/documents` - List uploaded documents
-- `POST /api/query` - Query the document corpus
-- `DELETE /api/documents/:id` - Delete a document
-
-## 🧪 Testing
-
-Run the test suite:
-
-```bash
-cd backend
-npm test              # Unit tests
-npm run test:e2e      # End-to-end tests
-npm run test:cov      # Coverage report
-```
-
-## 🚀 Deployment
-
-### Using Terraform
-
-1. **Plan the deployment**:
-   ```bash
-   cd terraform
-   terraform plan
-   ```
-
-2. **Deploy the infrastructure**:
-   ```bash
-   terraform apply
-   ```
-
-3. **Get the ALB URL**:
-   ```bash
-   terraform output alb_dns_name
-   ```
-
-### Manual Deployment
-
-1. Build the Docker image:
-   ```bash
-   docker build -t ragify-backend ./backend
-   ```
-
-2. Tag and push to ECR:
-   ```bash
-   aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-west-2.amazonaws.com
-   docker tag ragify-backend:latest <account-id>.dkr.ecr.us-west-2.amazonaws.com/ragify-backend:latest
-   docker push <account-id>.dkr.ecr.us-west-2.amazonaws.com/ragify-backend:latest
-   ```
-
-## 📝 Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Application port | `3000` |
-| `NODE_ENV` | Environment | `development` |
-| `DATABASE_URL` | PostgreSQL connection string | Required |
-| `AWS_REGION` | AWS region | `us-west-2` |
-| `S3_BUCKET_NAME` | S3 bucket for file storage | Required |
-
-## 🔍 Monitoring
-
-The application includes:
-
-- **Health checks** at `/health`
-- **CloudWatch logs** for application monitoring
-- **ECS service metrics** for container health
-- **ALB metrics** for load balancer performance
-
-## 🛡️ Security Considerations
-
-- Database is in private subnets
-- S3 bucket has public access blocked
-- IAM roles follow least privilege principle
-- All data is encrypted at rest
-- Security groups restrict network access
-
-## 📚 Documentation
-
-- [NestJS Documentation](https://docs.nestjs.com/)
-- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [AWS ECS Documentation](https://docs.aws.amazon.com/ecs/)
-- [AWS RDS Documentation](https://docs.aws.amazon.com/rds/)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-If you encounter any issues or have questions:
-
-1. Check the [Issues](https://github.com/shakedshoshan/RAGify/issues) page
-2. Create a new issue with detailed information
-3. Contact the maintainers
-
-## 🔄 Version History
-
-- **v1.0.0** - Initial release with basic RAG functionality
-- **v1.1.0** - Added AWS infrastructure with Terraform
-- **v1.2.0** - Enhanced security and monitoring
-
----
-
-**Built with ❤️ using NestJS, AWS, and Terraform**
+This project is licensed under the MIT License. See the LICENSE file for details.
