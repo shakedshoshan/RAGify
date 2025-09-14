@@ -1,0 +1,3 @@
+[33mfcac2c8[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m Update .gitignore to exclude Terraform provider files and directories
+[33m523f78c[m Set up basic project structure for RAGify with NestJS backend
+[33mb31f9d5[m[33m ([m[1;31morigin/master[m[33m)[m Initial commit: RAGify project setup with NestJS backend

@@ -1,0 +1,18 @@
+# AWS Configuration
+aws_region = "us-west-2"
+
+# Project Configuration
+project_name = "ragify"
+environment  = "dev"
+
+# VPC Configuration
+vpc_cidr               = "10.0.0.0/16"
+public_subnet_cidrs    = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs   = ["10.0.10.0/24", "10.0.20.0/24"]
+
+# Database Configuration
+db_username = "ragify_admin"
+db_password = "changeme123!"  # Change this to a secure password
+
+# S3 Configuration (optional - will auto-generate if empty)
+s3_bucket_name = "ragify"
