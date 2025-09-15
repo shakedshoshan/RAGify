@@ -55,32 +55,7 @@ resource "aws_subnet" "private" {
   }
 }
 
-# Elastic IP for NAT Gateway
-resource "aws_eip" "nat" {
-  domain = "vpc"
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-nat-eip"
-    Project     = var.project_name
-    Environment = var.environment
-  }
-
-  depends_on = [aws_internet_gateway.main]
-}
-
-# NAT Gateway
-resource "aws_nat_gateway" "main" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-nat-gw"
-    Project     = var.project_name
-    Environment = var.environment
-  }
-
-  depends_on = [aws_internet_gateway.main]
-}
+# NAT Gateway and EIP removed for minimal RDS-only configuration
 
 # Route Table for Public Subnets
 resource "aws_route_table" "public" {
@@ -98,14 +73,9 @@ resource "aws_route_table" "public" {
   }
 }
 
-# Route Table for Private Subnets
+# Route Table for Private Subnets - no internet access needed for RDS-only setup
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main.id
-  }
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-private-rt"

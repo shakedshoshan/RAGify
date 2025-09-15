@@ -42,52 +42,11 @@ output "database_username" {
   sensitive   = true
 }
 
-# S3 Outputs
-output "s3_bucket_name" {
-  description = "Name of the S3 bucket"
-  value       = aws_s3_bucket.ragify_files.bucket
-}
+# Database table outputs removed for minimal configuration
 
-output "s3_bucket_arn" {
-  description = "ARN of the S3 bucket"
-  value       = aws_s3_bucket.ragify_files.arn
-}
 
-output "s3_bucket_domain_name" {
-  description = "Domain name of the S3 bucket"
-  value       = aws_s3_bucket.ragify_files.bucket_domain_name
-}
+# ECS outputs removed for minimal configuration
 
-# ECS Outputs
-output "ecs_cluster_id" {
-  description = "ID of the ECS cluster"
-  value       = aws_ecs_cluster.ragify_cluster.id
-}
-
-output "ecs_cluster_arn" {
-  description = "ARN of the ECS cluster"
-  value       = aws_ecs_cluster.ragify_cluster.arn
-}
-
-output "ecs_cluster_name" {
-  description = "Name of the ECS cluster"
-  value       = aws_ecs_cluster.ragify_cluster.name
-}
-
-output "alb_dns_name" {
-  description = "DNS name of the load balancer"
-  value       = aws_lb.ragify_alb.dns_name
-}
-
-output "alb_zone_id" {
-  description = "Zone ID of the load balancer"
-  value       = aws_lb.ragify_alb.zone_id
-}
-
-output "target_group_arn" {
-  description = "ARN of the target group"
-  value       = aws_lb_target_group.ragify_tg.arn
-}
 
 # IAM Outputs
 output "iam_user_name" {
@@ -112,34 +71,10 @@ output "iam_secret_access_key" {
   sensitive   = true
 }
 
-output "ecs_task_execution_role_arn" {
-  description = "ARN of the ECS task execution role"
-  value       = aws_iam_role.ecs_task_execution_role.arn
-}
-
-output "ecs_task_role_arn" {
-  description = "ARN of the ECS task role"
-  value       = aws_iam_role.ecs_task_role.arn
-}
+# ECS role outputs removed for minimal configuration
 
 # Security Group Outputs
-output "ecs_security_group_id" {
-  description = "ID of the ECS security group"
-  value       = aws_security_group.ecs_sg.id
-}
-
 output "rds_security_group_id" {
   description = "ID of the RDS security group"
   value       = aws_security_group.rds_sg.id
-}
-
-output "alb_security_group_id" {
-  description = "ID of the ALB security group"
-  value       = aws_security_group.alb_sg.id
-}
-
-# CloudWatch Log Group
-output "cloudwatch_log_group_name" {
-  description = "Name of the CloudWatch log group"
-  value       = aws_cloudwatch_log_group.ragify_logs.name
 }

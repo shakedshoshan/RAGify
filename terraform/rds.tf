@@ -17,11 +17,20 @@ resource "aws_security_group" "rds_sg" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_sg.id]
-    description     = "PostgreSQL access from ECS services"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.main.cidr_block]
+    description = "PostgreSQL access from VPC"
+  }
+
+  # Allow access from your local machine (replace with your actual IP)
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # WARNING: This allows access from anywhere
+    description = "PostgreSQL access from internet (for DBeaver)"
   }
 
   egress {
@@ -62,7 +71,7 @@ resource "aws_db_instance" "ragify_db" {
   # Network & Security
   db_subnet_group_name   = aws_db_subnet_group.ragify_db_subnet_group.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  publicly_accessible    = false
+  publicly_accessible    = true
 
   # Backup & Maintenance
   backup_retention_period = 7

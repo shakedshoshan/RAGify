@@ -47,8 +47,3 @@ variable "db_password" {
   default     = "changeme123!"
 }
 
-variable "s3_bucket_name" {
-  description = "Name of the S3 bucket for file storage"
-  type        = string
-  default     = ""
-}

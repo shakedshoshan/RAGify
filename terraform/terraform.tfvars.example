@@ -14,5 +14,3 @@ private_subnet_cidrs   = ["10.0.10.0/24", "10.0.20.0/24"]
 db_username = "ragify_admin"
 db_password = "changeme123!"  # Change this to a secure password
 
-# S3 Configuration (optional - will auto-generate if empty)
-s3_bucket_name = "ragify"

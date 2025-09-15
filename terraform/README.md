@@ -1,6 +1,6 @@
 # RAGify AWS Infrastructure
 
-This Terraform configuration provisions the foundational AWS cloud infrastructure for the RAGify project, including VPC, RDS PostgreSQL database, S3 storage, ECS cluster, and IAM resources.
+This Terraform configuration provisions the foundational AWS cloud infrastructure for the RAGify project, including VPC, RDS PostgreSQL database, ECS cluster, and IAM resources.
 
 ## Architecture Overview
 
@@ -8,10 +8,9 @@ The infrastructure includes:
 
 - **VPC**: Isolated network with public and private subnets across multiple AZs
 - **RDS PostgreSQL**: Database instance in private subnet for secure data storage
-- **S3 Bucket**: Encrypted storage for uploaded files (PDFs, DOCX, etc.)
+- **Database Tables**: Pre-configured `rawData` table with user_id, name, and text columns
 - **ECS Cluster**: Container orchestration platform using Fargate
 - **IAM**: Least privilege access controls for application resources
-- **ALB**: Application Load Balancer for high availability
 - **Security Groups**: Network-level security controls
 
 ## Prerequisites
@@ -38,7 +37,6 @@ The infrastructure includes:
 3. **AWS Permissions**: Ensure your AWS credentials have permissions for:
    - VPC management (vpc:*, ec2:*)
    - RDS management (rds:*)
-   - S3 management (s3:*)
    - ECS management (ecs:*)
    - IAM management (iam:*)
    - CloudWatch Logs (logs:*)
@@ -94,8 +92,6 @@ environment  = "dev"
 db_username = "ragify_admin"
 db_password = "your-secure-password-here"  # Use a strong password!
 
-# Optional: Custom S3 bucket name (will auto-generate if empty)
-s3_bucket_name = ""
 ```
 
 ### Network Configuration
@@ -122,25 +118,39 @@ After deployment, you'll get important connection details:
 terraform output rds_endpoint
 terraform output database_name
 
-# S3 bucket for file storage
-terraform output s3_bucket_name
+# Database table information
+terraform output raw_data_table_name
+terraform output raw_data_table_schema
 
 # ECS cluster for application deployment
 terraform output ecs_cluster_name
-terraform output alb_dns_name
 
 # IAM credentials (sensitive - handle securely)
 terraform output iam_access_key_id
 terraform output iam_secret_access_key
 ```
 
+## Database Schema
+
+The Terraform configuration automatically creates a `rawData` table with the following structure:
+
+| Column   | Type         | Constraints |
+|----------|--------------|-------------|
+| user_id  | VARCHAR(255) | NOT NULL, PRIMARY KEY |
+| name     | VARCHAR(255) | NOT NULL    |
+| text     | TEXT         | NOT NULL    |
+
+**Table Features:**
+- **Primary Key**: `user_id` column serves as the primary key for unique identification
+- **Performance Index**: Optimized index on the `name` column for faster queries
+- **Schema**: Created in the PostgreSQL `public` schema
+- **Provider**: Uses the `cyrilgdn/postgresql` Terraform provider for table management
+
 ## Security Features
 
 - **Network Isolation**: Database and application servers in private subnets
-- **Encryption**: S3 bucket encryption enabled, RDS encryption enabled
+- **Encryption**: RDS encryption enabled
 - **Access Control**: IAM policies follow principle of least privilege
-- **Secure Transport**: S3 bucket policy enforces HTTPS connections
-- **Public Access Blocking**: S3 bucket blocks all public access
 
 ## Cost Optimization
 
@@ -148,7 +158,6 @@ The configuration uses cost-effective resources suitable for development:
 
 - **RDS**: `db.t3.micro` instance (eligible for free tier)
 - **ECS**: Fargate with minimal capacity
-- **S3**: Standard storage class with lifecycle policies
 - **NAT Gateway**: Single NAT Gateway (consider multiple for production)
 
 ## Environment Variables for Application
@@ -169,8 +178,6 @@ AWS_ACCESS_KEY_ID="<iam_access_key_id>"
 AWS_SECRET_ACCESS_KEY="<iam_secret_access_key>"
 AWS_REGION="<aws_region>"
 
-# S3
-S3_BUCKET_NAME="<s3_bucket_name>"
 
 # ECS
 ECS_CLUSTER_NAME="<ecs_cluster_name>"
@@ -180,7 +187,7 @@ ECS_CLUSTER_NAME="<ecs_cluster_name>"
 
 After infrastructure deployment:
 
-1. **Connect Application**: Update your backend application with the database and S3 credentials
+1. **Connect Application**: Update your backend application with the database credentials
 2. **Deploy Containers**: Create ECS task definitions and services for your application
 3. **Domain Setup**: Configure Route 53 and SSL certificates for production
 4. **Monitoring**: Set up CloudWatch alarms and dashboards
@@ -194,7 +201,7 @@ To destroy all resources:
 terraform destroy
 ```
 
-⚠️ **Warning**: This will permanently delete all resources including the database and S3 bucket contents.
+⚠️ **Warning**: This will permanently delete all resources including the database contents.
 
 ## File Structure
 
@@ -204,8 +211,7 @@ terraform/
 ├── variables.tf            # Variable definitions
 ├── vpc.tf                  # VPC, subnets, gateways
 ├── rds.tf                  # PostgreSQL database
-├── s3.tf                   # S3 bucket and policies
-├── ecs.tf                  # ECS cluster and load balancer
+├── ecs.tf                  # ECS cluster
 ├── iam.tf                  # IAM users, roles, and policies
 ├── outputs.tf              # Output values
 ├── terraform.tfvars.example # Example configuration
