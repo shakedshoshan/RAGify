@@ -6,6 +6,7 @@ import { TextController } from './controllers/text.controller';
 import { ProjectController } from './controllers/project.controller';
 import { FirestoreService } from './services/firestore.service';
 import { ProjectService } from './services/project.service';
+import { CsvService } from './services/csv.service';
 import firebaseConfig from './config/firebase.config';
 
 @Module({
@@ -16,6 +17,6 @@ import firebaseConfig from './config/firebase.config';
     }),
   ],
   controllers: [AppController, TextController, ProjectController],
-  providers: [AppService, FirestoreService, ProjectService],
+  providers: [AppService, FirestoreService, ProjectService, CsvService],
 })
 export class AppModule {}

@@ -1,10 +1,25 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { 
+  Body, 
+  Controller, 
+  Post, 
+  UploadedFile, 
+  UseInterceptors, 
+  BadRequestException, 
+  HttpException, 
+  HttpStatus,
+  Query
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { TextPayloadDto } from '../dto/text-payload.dto';
 import { FirestoreService } from '../services/firestore.service';
+import { CsvService } from '../services/csv.service';
 
 @Controller('text')
 export class TextController {
-  constructor(private readonly firestoreService: FirestoreService) {}
+  constructor(
+    private readonly firestoreService: FirestoreService,
+    private readonly csvService: CsvService
+  ) {}
 
   @Post()
   async createText(@Body() textPayloadDto: TextPayloadDto) {
@@ -26,6 +41,100 @@ export class TextController {
         message: 'Failed to create text',
         error: error.message,
       };
+    }
+  }
+  
+  @Post('upload-csv')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (req, file, callback) => {
+        // Accept only CSV files
+        if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+          callback(null, true);
+        } else {
+          callback(new BadRequestException('Only CSV files are allowed'), false);
+        }
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+      },
+    })
+  )
+  async uploadCSV(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('project_id') projectId: string,
+    @Query('delimiter') delimiter?: string,
+    @Query('skipEmptyLines') skipEmptyLines?: string,
+    @Query('name') name?: string,
+  ) {
+    try {
+      // Validate file exists
+      if (!file) {
+        throw new BadRequestException('No file uploaded');
+      }
+
+      // Validate project_id
+      if (!projectId) {
+        throw new BadRequestException('project_id is required');
+      }
+
+      // Validate file buffer
+      const validation = this.csvService.validateCSVFile(file.buffer);
+      if (!validation.isValid) {
+        throw new BadRequestException(validation.error);
+      }
+
+      // Auto-detect delimiter if not provided
+      const finalDelimiter = delimiter || this.csvService.detectDelimiter(file.buffer);
+
+      // Parse CSV
+      const parseOptions = {
+        delimiter: finalDelimiter,
+        skipEmptyLines: skipEmptyLines !== 'false',
+      };
+
+      const result = await this.csvService.parseCSV(file.buffer, parseOptions);
+      
+      // Convert parsed data to JSON string
+      const jsonData = JSON.stringify(result.data);
+      
+      // Create text payload
+      const textPayload: TextPayloadDto = {
+        project_id: projectId,
+        name: name || file.originalname,
+        text: jsonData
+      };
+
+      // Save to Firestore
+      const docRef = await this.firestoreService.addDocument('rawText', textPayload);
+      
+      return {
+        success: true,
+        id: docRef.id,
+        message: 'CSV file processed and saved successfully',
+        data: {
+          id: docRef.id,
+          filename: file.originalname,
+          size: file.size,
+          rowCount: result.rowCount,
+          headers: result.headers,
+          project_id: projectId,
+          name: textPayload.name
+        },
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Failed to process CSV file',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 }
