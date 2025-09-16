@@ -27,7 +27,6 @@ export class CsvService {
     return new Promise((resolve, reject) => {
       const results: any[] = [];
       let headers: string[] = [];
-      let isFirstRow = true;
 
       // Create readable stream from buffer
       const stream = Readable.from(buffer);
@@ -36,23 +35,27 @@ export class CsvService {
       const csvOptions = {
         separator: options.delimiter || ',',
         skipEmptyLines: options.skipEmptyLines !== false,
-        headers: options.headers !== undefined ? options.headers : true,
+        // Always use first row as headers (this is the key fix)
+        headers: true,
       };
 
       stream
         .pipe(csv(csvOptions))
         .on('headers', (headerList: string[]) => {
+          // This event fires when headers are detected from first row
           headers = headerList;
         })
         .on('data', (data) => {
-          // Capture headers from first row if not already set
-          if (isFirstRow && headers.length === 0) {
-            headers = Object.keys(data);
-            isFirstRow = false;
-          }
+          // Each data row will now be an object with header names as keys
+          // The first row (headers) is automatically excluded from data
           results.push(data);
         })
         .on('end', () => {
+          // If headers weren't captured via the 'headers' event, get them from first data object
+          if (headers.length === 0 && results.length > 0) {
+            headers = Object.keys(results[0]);
+          }
+          
           resolve({
             data: results,
             rowCount: results.length,
