@@ -13,12 +13,3 @@ provider "aws" {
   region = var.aws_region
 }
 
-# PostgreSQL provider removed for minimal configuration
-
-# Data source to get availability zones
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
-# Data source to get current caller identity
-data "aws_caller_identity" "current" {}
