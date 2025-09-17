@@ -201,4 +201,44 @@ export class FirestoreService {
   async getRawTextsByProjectId(projectId: string) {
     return this.queryDocuments('rawText', { project_id: projectId });
   }
+
+  /**
+   * Get all chunks for a specific project
+   * @param projectId The project ID to filter by
+   * @returns A promise that resolves to the text chunks
+   */
+  async getChunksByProjectId(projectId: string) {
+    return this.queryDocuments('textChunks', { project_id: projectId });
+  }
+
+  /**
+   * Get all embeddings for a specific project
+   * @param projectId The project ID to filter by
+   * @returns A promise that resolves to the embeddings
+   */
+  async getEmbeddingsByProjectId(projectId: string) {
+    return this.queryDocuments('embeddings', { 'metadata.projectId': projectId });
+  }
+
+  /**
+   * Delete all documents in a collection that match the given filters
+   * @param collectionName The name of the collection
+   * @param filters The filters to match documents for deletion
+   * @returns A promise that resolves to the number of deleted documents
+   */
+  async deleteDocumentsByFilter(collectionName: string, filters: Record<string, any>): Promise<number> {
+    const documents = await this.queryDocuments(collectionName, filters);
+    let deletedCount = 0;
+    
+    for (const doc of documents) {
+      try {
+        await this.deleteDocument(collectionName, doc.id);
+        deletedCount++;
+      } catch (error) {
+        console.warn(`Failed to delete document ${doc.id}:`, error.message);
+      }
+    }
+    
+    return deletedCount;
+  }
 }
