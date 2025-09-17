@@ -1,2 +1,5 @@
 export { default as HomePage } from './HomePage';
 export { default as TextPage } from './TextPage';
+export { LoginPage } from './LoginPage';
+export { RegisterPage } from './RegisterPage';
+export { ProfilePage } from './ProfilePage';
