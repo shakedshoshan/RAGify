@@ -30,3 +30,25 @@ export class CreateProjectDto {
   @IsNotEmpty()
   name: string;
 }
+
+export class UserIdDto {
+  @IsString()
+  @IsNotEmpty()
+  user_id: string;
+}
+
+export class ProjectResponseDto {
+  @IsString()
+  @IsNotEmpty()
+  user_id: string;
+
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsOptional()
+  createdAt?: any; // Firestore timestamp
+
+  @IsOptional()
+  updatedAt?: any; // Firestore timestamp
+}

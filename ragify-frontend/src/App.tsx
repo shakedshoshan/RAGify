@@ -5,6 +5,7 @@ import Navigation from './components/Navigation'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { 
   HomePage, 
+  ProjectsPage,
   TextPage, 
   LoginPage, 
   RegisterPage, 
@@ -21,6 +22,14 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route 
+              path="/projects" 
+              element={
+                <ProtectedRoute>
+                  <ProjectsPage />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/text" 
               element={

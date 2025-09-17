@@ -9,6 +9,7 @@ const Navigation: React.FC = () => {
   
   const navItems = [
     { path: '/', label: 'Home', icon: '🏠' },
+    { path: '/projects', label: 'Projects', icon: '📁' },
     { path: '/text', label: 'Create Text', icon: '📝' },
   ];
 

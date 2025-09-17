@@ -114,9 +114,11 @@ export class FirestoreService {
    */
   async addDocument(collectionName: string, data: any) {
     const collection = this.getCollection(collectionName);
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
     const docRef = await collection.add({
       ...data,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: timestamp,
+      updatedAt: timestamp,
     });
     
     return docRef;

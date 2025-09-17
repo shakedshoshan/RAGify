@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { ProjectDto, ProjectIdDto, CreateProjectDto } from '../dto/project.dto';
+import { ProjectDto, ProjectIdDto, CreateProjectDto, UserIdDto, ProjectResponseDto } from '../dto/project.dto';
 import { ProjectService } from '../services/project.service';
 
 @Controller('projects')
@@ -52,13 +52,23 @@ export class ProjectController {
   }
 
   @Get('user/:user_id')
-  async getProjectsByUserId(@Param() params: CreateProjectDto) {
+  async getProjectsByUserId(@Param() params: UserIdDto) {
     try {
       const projects = await this.projectService.getProjectsByUserId(params.user_id);
       
+      // Transform the data to include only the required fields
+      const transformedProjects = projects.map((project: any) => ({
+        id: project.id,
+        project_id: project.project_id,
+        user_id: project.user_id,
+        name: project.name,
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt,
+      }));
+      
       return {
         success: true,
-        data: projects,
+        data: transformedProjects,
       };
     } catch (error) {
       return {
