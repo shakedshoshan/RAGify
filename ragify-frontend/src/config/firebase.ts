@@ -4,13 +4,13 @@ import { getAuth, connectAuthEmulator } from 'firebase/auth';
 // Firebase configuration
 // Use environment variables with fallback to hardcoded values for development
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBJf-Gu2krwFZugYis5B2bBJ8_zpy_LCRg",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "ragify-491a7.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "ragify-491a7",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "ragify-491a7.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "992593678328",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:992593678328:web:b9770fb94168b2b7e8500d",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-QKFLX7GEWE"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ""
 };
 
 // Validate configuration
