@@ -42,7 +42,7 @@ const TextPage: React.FC = () => {
       setResult({ 
         success: true, 
         message: 'Text created successfully!', 
-        id: response.id 
+        id: response.id
       });
       setFormData({ project_id: '', name: '', text: '' });
     } else {

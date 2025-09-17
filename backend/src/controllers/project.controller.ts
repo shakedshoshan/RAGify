@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { ProjectDto, ProjectIdDto, CreateProjectDto, UserIdDto, ProjectResponseDto } from '../dto/project.dto';
+import { ProjectDto, ProjectIdDto, CreateProjectDto, UserIdDto, ProjectResponseDto, ProjectWithRawTextDto } from '../dto/project.dto';
 import { ProjectService } from '../services/project.service';
 
 @Controller('projects')
@@ -29,9 +29,9 @@ export class ProjectController {
   @Get(':id')
   async getProjectById(@Param() params: ProjectIdDto) {
     try {
-      const project = await this.projectService.getProjectById(params.id);
+      const projectWithRawText = await this.projectService.getProjectById(params.id);
       
-      if (!project) {
+      if (!projectWithRawText) {
         return {
           success: false,
           message: 'Project not found',
@@ -40,7 +40,7 @@ export class ProjectController {
       
       return {
         success: true,
-        data: project,
+        data: projectWithRawText,
       };
     } catch (error) {
       return {

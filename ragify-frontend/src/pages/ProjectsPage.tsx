@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCreateProject, useGetProjects, useDeleteProject } from '../hooks';
 import type { Project, CreateProjectPayload } from '../types/projects_types';
 
 const ProjectsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { createProject, isLoading: isCreating, error: createError } = useCreateProject();
   const { getProjectsByUserId, isLoading: isFetching, error: fetchError } = useGetProjects();
@@ -66,6 +68,10 @@ const ProjectsPage: React.FC = () => {
     } else {
       setError(deleteError || 'Failed to delete project');
     }
+  };
+
+  const handleViewDetails = (projectId: string) => {
+    navigate(`/projects/${projectId}`);
   };
 
   const formatDate = (dateString?: string) => {
@@ -212,12 +218,6 @@ const ProjectsPage: React.FC = () => {
                   
                   <div className="space-y-2 text-sm text-gray-600">
                     <div className="flex items-center">
-                      <span className="font-medium">Project ID:</span>
-                      <span className="ml-2 font-mono text-xs bg-gray-100 px-2 py-1 rounded">
-                        {project.project_id}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
                       <span className="font-medium">Created:</span>
                       <span className="ml-2">{formatDate(project.createdAt)}</span>
                     </div>
@@ -230,7 +230,10 @@ const ProjectsPage: React.FC = () => {
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-gray-200">
-                    <button className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                    <button 
+                      onClick={() => handleViewDetails(project.id)}
+                      className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                    >
                       View Details
                     </button>
                   </div>

@@ -4,6 +4,15 @@ export interface CreateProjectPayload {
     name: string;
   }
   
+export interface RawTextDocument {
+    id: string;
+    project_id: string | number;
+    name: string;
+    text: string;
+    createdAt?: any; // Firestore timestamp
+    updatedAt?: any; // Firestore timestamp
+  }
+
 export interface Project {
     id: string;
     project_id: number;
@@ -11,6 +20,7 @@ export interface Project {
     name: string;
     createdAt?: any; // Firestore timestamp
     updatedAt?: any; // Firestore timestamp
+    rawTextDocuments?: RawTextDocument[]; // Array of associated rawText documents
   }
   
 export interface ProjectResponse {

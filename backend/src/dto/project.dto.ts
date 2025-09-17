@@ -52,3 +52,8 @@ export class ProjectResponseDto {
   @IsOptional()
   updatedAt?: any; // Firestore timestamp
 }
+
+export class ProjectWithRawTextDto extends ProjectResponseDto {
+  @IsOptional()
+  rawTextDocuments?: any[]; // Array of rawText documents
+}

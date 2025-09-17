@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { 
   HomePage, 
   ProjectsPage,
+  ProjectDetailsPage,
   TextPage, 
   LoginPage, 
   RegisterPage, 
@@ -27,6 +28,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProjectsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/projects/:projectId" 
+              element={
+                <ProtectedRoute>
+                  <ProjectDetailsPage />
                 </ProtectedRoute>
               } 
             />
