@@ -192,4 +192,13 @@ export class FirestoreService {
       ...doc.data(),
     }));
   }
+
+  /**
+   * Get all raw text documents for a specific project
+   * @param projectId The project ID to filter by
+   * @returns A promise that resolves to the raw text documents
+   */
+  async getRawTextsByProjectId(projectId: string) {
+    return this.queryDocuments('rawText', { project_id: projectId });
+  }
 }

@@ -261,16 +261,6 @@ const ProjectDetailsPage: React.FC = () => {
                 </div>
               </div>
             )}
-            
-            {/* Raw Data Section */}
-            <div className="mt-8 pt-8 border-t border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Raw Project Data</h2>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <pre className="text-sm text-gray-700 overflow-x-auto">
-                  {JSON.stringify(project, null, 2)}
-                </pre>
-              </div>
-            </div>
 
             {/* Actions */}
             <div className="mt-8 pt-8 border-t border-gray-200">
