@@ -2,6 +2,10 @@
 export { useText } from './useText';
 export type { TextPayload, TextResponse } from './useText';
 
+// Export the delete text hook and types
+export { useDeleteText } from './useDeleteText';
+export type { DeleteTextResponse } from './useDeleteText';
+
 // Export the CSV upload hook and types
 export { useCsvUpload } from './useCsvUpload';
 export type { CsvUploadOptions, CsvUploadResponse } from './useCsvUpload';

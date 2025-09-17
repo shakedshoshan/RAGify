@@ -2,6 +2,8 @@ import {
   Body, 
   Controller, 
   Post, 
+  Delete,
+  Param,
   UploadedFile, 
   UseInterceptors, 
   BadRequestException, 
@@ -131,6 +133,54 @@ export class TextController {
         {
           success: false,
           message: 'Failed to process CSV file',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Delete(':id')
+  async deleteText(@Param('id') id: string) {
+    try {
+      // Validate ID parameter
+      if (!id) {
+        throw new BadRequestException('ID parameter is required');
+      }
+
+      // Check if document exists before deletion
+      const existingDoc = await this.firestoreService.getDocument('rawText', id);
+      if (!existingDoc) {
+        throw new HttpException(
+          {
+            success: false,
+            message: 'Text document not found',
+            error: `No document found with ID: ${id}`,
+          },
+          HttpStatus.NOT_FOUND
+        );
+      }
+
+      // Delete the document
+      await this.firestoreService.deleteDocument('rawText', id);
+
+      return {
+        success: true,
+        message: 'Text deleted successfully',
+        data: {
+          id: id,
+          deletedAt: new Date().toISOString(),
+        },
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Failed to delete text',
           error: error.message,
         },
         HttpStatus.INTERNAL_SERVER_ERROR
