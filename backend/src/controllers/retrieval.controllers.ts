@@ -1,7 +1,7 @@
 import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { EmbeddingService } from '../services/embedding.service';
 import { PineconeService } from '../services/pinecone.service';
-import { RetrievalRequestDto, RetrievalResponseDto, RetrievalResult } from '../dto/retrieval.dto';
+import { RetrievalRequestDto, RetrievalResult } from '../dto/retrieval.dto';
 import { GenerationRequestDto } from '../dto/generation.dto';
 
 @Controller('retrieval')
@@ -61,13 +61,10 @@ export class RetrievalController {
     // Step 3: Format results with metadata
     if (!searchResults.matches || searchResults.matches.length === 0) {
       return {
-        retrievedData: {
           query: prompt,
-          totalResults: 0,
           context: "",
           instruction: "You are a helpful assistant. Use ONLY the provided context to answer the question. If the answer is not in the context, say \"I don't have enough information to answer that question based on the provided context.\""
         }
-      };
     }
     
     const results: RetrievalResult[] = searchResults.matches.map(match => ({
@@ -90,12 +87,9 @@ export class RetrievalController {
 
     // Return data formatted for generation service
     return {
-      retrievedData: {
         query: prompt,
-        totalResults: results.length,
         context: context,
         instruction: "You are a helpful assistant. Use ONLY the provided context to answer the question. If the answer is not in the context, say \"I don't have enough information to answer that question based on the provided context.\""
       }
-    };
   }
 }
