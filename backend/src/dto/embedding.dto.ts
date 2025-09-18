@@ -18,8 +18,21 @@ export class EmbeddingRequestDto {
   chunkIds?: string[]; // Optional: specific chunk IDs to embed, if not provided, embeds all chunks for project
 }
 
+export class ProjectEmbeddingDocumentDto {
+  projectId: string;
+  embeddingIds: string[];
+  processedChunks: number;
+  totalEmbeddings: number;
+  modelUsed: string;
+  dimensions: number;
+  status: 'completed' | 'processing' | 'failed';
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export class EmbeddingResponseDto {
   projectId: string;
+  projectDocumentId?: string; // Reference to the project document in Firestore
   processedChunks: number;
   totalEmbeddings: number;
   embeddingIds: string[];
