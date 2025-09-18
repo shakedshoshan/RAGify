@@ -13,7 +13,7 @@ import { FirestoreService } from './firestore.service';
 export class EmbeddingService {
   private openai: OpenAI;
   private readonly defaultModel = 'text-embedding-3-small';
-  private readonly defaultDimensions = 1536;
+  private readonly defaultDimensions = 512;
 
   constructor(
     private readonly firestoreService: FirestoreService,
@@ -126,9 +126,32 @@ export class EmbeddingService {
   }
 
   /**
+   * Get chunks for embedding without saving to Firestore
+   */
+  async getChunksForEmbedding(request: EmbeddingRequestDto): Promise<any[]> {
+    const { projectId, chunkIds } = request;
+
+    // Get chunks to embed
+    let chunks;
+    if (chunkIds && chunkIds.length > 0) {
+      // Get specific chunks by IDs
+      chunks = await this.getChunksByIds(chunkIds);
+    } else {
+      // Get all chunks for the project
+      chunks = await this.firestoreService.getChunksByProjectId(projectId);
+    }
+
+    if (!chunks || chunks.length === 0) {
+      throw new NotFoundException(`No chunks found for project ${projectId}`);
+    }
+
+    return chunks;
+  }
+
+  /**
    * Generate embeddings for texts using OpenAI's API
    */
-  private async generateEmbeddings(texts: string[], modelName: string): Promise<number[][]> {
+  async generateEmbeddings(texts: string[], modelName: string): Promise<number[][]> {
     if (!texts || texts.length === 0) {
       throw new BadRequestException('No texts provided for embedding');
     }
@@ -138,6 +161,7 @@ export class EmbeddingService {
         model: modelName,
         input: texts,
         encoding_format: 'float',
+        dimensions: this.defaultDimensions,
       });
 
       return response.data.map(item => item.embedding);
@@ -165,25 +189,6 @@ export class EmbeddingService {
     return embeddingIds;
   }
 
-  /**
-   * Get chunks by their IDs
-   */
-  private async getChunksByIds(chunkIds: string[]): Promise<any[]> {
-    const chunks: any[] = [];
-    
-    for (const chunkId of chunkIds) {
-      try {
-        const chunk = await this.firestoreService.getDocument('textChunks', chunkId);
-        if (chunk) {
-          chunks.push(chunk);
-        }
-      } catch (error) {
-        console.warn(`Failed to get chunk ${chunkId}:`, error.message);
-      }
-    }
-    
-    return chunks;
-  }
 
   /**
    * Get project embedding documents by project ID
@@ -197,5 +202,42 @@ export class EmbeddingService {
    */
   async getProjectEmbeddingDocument(documentId: string): Promise<any> {
     return this.firestoreService.getDocument('projectEmbeddings', documentId);
+  }
+
+  /**
+   * Get chunks by project ID from Firestore
+   */
+  async getChunksByProjectId(projectId: string): Promise<any[]> {
+    const chunks = await this.firestoreService.getChunksByProjectId(projectId);
+    
+    if (!chunks || chunks.length === 0) {
+      throw new NotFoundException(`No chunks found for project ${projectId}`);
+    }
+    
+    return chunks;
+  }
+
+  /**
+   * Get chunks by their IDs (made public for controller access)
+   */
+  async getChunksByIds(chunkIds: string[]): Promise<any[]> {
+    const chunks: any[] = [];
+    
+    for (const chunkId of chunkIds) {
+      try {
+        const chunk = await this.firestoreService.getDocument('textChunks', chunkId);
+        if (chunk) {
+          chunks.push(chunk);
+        }
+      } catch (error) {
+        console.warn(`Failed to get chunk ${chunkId}:`, error.message);
+      }
+    }
+    
+    if (chunks.length === 0) {
+      throw new NotFoundException(`No chunks found for the provided chunk IDs`);
+    }
+    
+    return chunks;
   }
 }

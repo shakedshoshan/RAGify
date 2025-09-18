@@ -11,16 +11,18 @@ import { ProjectService } from './services/project.service';
 import { CsvService } from './services/csv.service';
 import { ChunkingService } from './services/chunking.service';
 import { EmbeddingService } from './services/embedding.service';
+import { PineconeService } from './services/pinecone.service';
 import firebaseConfig from './config/firebase.config';
+import pineconeConfig from './config/pinecone.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [firebaseConfig],
+      load: [firebaseConfig, pineconeConfig],
     }),
   ],
   controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController],
-  providers: [AppService, FirestoreService, ProjectService, CsvService, ChunkingService, EmbeddingService],
+  providers: [AppService, FirestoreService, ProjectService, CsvService, ChunkingService, EmbeddingService, PineconeService],
 })
 export class AppModule {}
