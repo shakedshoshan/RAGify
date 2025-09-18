@@ -7,12 +7,14 @@ import { ProjectController } from './controllers/project.controller';
 import { ChunkingController } from './controllers/chunking.controller';
 import { EmbeddingController } from './controllers/embedding.controller';
 import { RetrievalController } from './controllers/retrieval.controllers';
+import { GenerationController } from './controllers/generation.controller';
 import { FirestoreService } from './services/firestore.service';
 import { ProjectService } from './services/project.service';
 import { CsvService } from './services/csv.service';
 import { ChunkingService } from './services/chunking.service';
 import { EmbeddingService } from './services/embedding.service';
 import { PineconeService } from './services/pinecone.service';
+import { GenerationService } from './services/generation.service';
 import firebaseConfig from './config/firebase.config';
 import pineconeConfig from './config/pinecone.config';
 
@@ -23,7 +25,7 @@ import pineconeConfig from './config/pinecone.config';
       load: [firebaseConfig, pineconeConfig],
     }),
   ],
-  controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, RetrievalController],
-  providers: [AppService, FirestoreService, ProjectService, CsvService, ChunkingService, EmbeddingService, PineconeService],
+  controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, RetrievalController, GenerationController],
+  providers: [AppService, FirestoreService, ProjectService, CsvService, ChunkingService, EmbeddingService, PineconeService, GenerationService],
 })
 export class AppModule {}

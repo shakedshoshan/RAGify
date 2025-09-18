@@ -2,6 +2,7 @@ import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { EmbeddingService } from '../services/embedding.service';
 import { PineconeService } from '../services/pinecone.service';
 import { RetrievalRequestDto, RetrievalResponseDto, RetrievalResult } from '../dto/retrieval.dto';
+import { GenerationRequestDto } from '../dto/generation.dto';
 
 @Controller('retrieval')
 export class RetrievalController {
@@ -11,7 +12,7 @@ export class RetrievalController {
   ) {}
 
   @Post('query')
-  async queryDocuments(@Body() requestDto: RetrievalRequestDto): Promise<RetrievalResponseDto> {
+  async queryDocuments(@Body() requestDto: RetrievalRequestDto): Promise<GenerationRequestDto> {
     console.log('Raw request body:', JSON.stringify(requestDto, null, 2));
     const { prompt, projectId, topK = 5 } = requestDto;
     console.log('Destructured prompt:', prompt);
@@ -60,9 +61,12 @@ export class RetrievalController {
     // Step 3: Format results with metadata
     if (!searchResults.matches || searchResults.matches.length === 0) {
       return {
-        query: prompt,
-        results: [],
-        totalResults: 0
+        retrievedData: {
+          query: prompt,
+          totalResults: 0,
+          context: "",
+          instruction: "You are a helpful assistant. Use ONLY the provided context to answer the question. If the answer is not in the context, say \"I don't have enough information to answer that question based on the provided context.\""
+        }
       };
     }
     
@@ -79,10 +83,19 @@ export class RetrievalController {
       }
     }));
 
+    // Format context for RAG
+    const context = results
+      .map((result, index) => `[${index + 1}] ${result.content}`)
+      .join('\n\n');
+
+    // Return data formatted for generation service
     return {
-      query: prompt,
-      results,
-      totalResults: results.length
+      retrievedData: {
+        query: prompt,
+        totalResults: results.length,
+        context: context,
+        instruction: "You are a helpful assistant. Use ONLY the provided context to answer the question. If the answer is not in the context, say \"I don't have enough information to answer that question based on the provided context.\""
+      }
     };
   }
 }
