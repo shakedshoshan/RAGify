@@ -6,7 +6,6 @@ import { TextController } from './controllers/text.controller';
 import { ProjectController } from './controllers/project.controller';
 import { ChunkingController } from './controllers/chunking.controller';
 import { EmbeddingController } from './controllers/embedding.controller';
-import { RetrievalController } from './controllers/retrieval.controllers';
 import { GenerationController } from './controllers/generation.controller';
 import { FirestoreService } from './services/firestore.service';
 import { ProjectService } from './services/project.service';
@@ -26,7 +25,7 @@ import pineconeConfig from './config/pinecone.config';
       load: [firebaseConfig, pineconeConfig],
     }),
   ],
-  controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, RetrievalController, GenerationController],
+  controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, GenerationController],
   providers: [AppService, FirestoreService, ProjectService, CsvService, ChunkingService, EmbeddingService, PineconeService, GenerationService, RetrievalService],
 })
 export class AppModule {}
