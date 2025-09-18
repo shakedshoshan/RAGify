@@ -15,6 +15,7 @@ import { ChunkingService } from './services/chunking.service';
 import { EmbeddingService } from './services/embedding.service';
 import { PineconeService } from './services/pinecone.service';
 import { GenerationService } from './services/generation.service';
+import { RetrievalService } from './services/retrieval.service';
 import firebaseConfig from './config/firebase.config';
 import pineconeConfig from './config/pinecone.config';
 
@@ -26,6 +27,6 @@ import pineconeConfig from './config/pinecone.config';
     }),
   ],
   controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, RetrievalController, GenerationController],
-  providers: [AppService, FirestoreService, ProjectService, CsvService, ChunkingService, EmbeddingService, PineconeService, GenerationService],
+  providers: [AppService, FirestoreService, ProjectService, CsvService, ChunkingService, EmbeddingService, PineconeService, GenerationService, RetrievalService],
 })
 export class AppModule {}

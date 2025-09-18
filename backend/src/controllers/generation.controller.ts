@@ -1,39 +1,31 @@
 import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { GenerationService } from '../services/generation.service';
 import { GenerationResponseDto, GenerationRequestDto } from '../dto/generation.dto';
+import { RetrievalService } from '../services/retrieval.service';
+import { RetrievalRequestDto } from '../dto/retrieval.dto';
 
 @Controller('generation')
 export class GenerationController {
-  constructor(private readonly generationService: GenerationService) {}
+  constructor(
+    private readonly generationService: GenerationService,
+    private readonly retrievalService: RetrievalService
+  ) {}
 
   @Post('generate')
-  async generateAnswer(@Body() requestDto: any): Promise<GenerationResponseDto> {
-    
-    // Extract the fields, with fallbacks for undefined values
-    const query = requestDto.query || '';
-    const context = requestDto.context || '';
-    const instruction = requestDto.instruction || '';
-    
-    // Validate required fields
-    if (!query || !context) {
-      throw new BadRequestException('Query and context are required');
-    }
-
+  async generateAnswer(@Body() requestDto: RetrievalRequestDto): Promise<GenerationResponseDto> {
     try {
-      const retrievedData = {
-        query,
-        context,
-        instruction,
-      };
+      // Step 1: Use retrieval service to get context
+      const retrievedData = await this.retrievalService.queryDocuments(requestDto);
 
+      // Step 2: Generate response using the retrieved context
       const answer = await this.generationService.generateResponse(
         retrievedData,
-        query
+        retrievedData.query
       );
 
       return {
         answer,
-        query
+        query: retrievedData.query
       };
     } catch (error) {
       console.error('Generation error:', error);
