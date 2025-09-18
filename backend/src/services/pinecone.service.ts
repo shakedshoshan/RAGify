@@ -177,4 +177,36 @@ export class PineconeService {
     }
   }
 
+  /**
+   * Query vectors by similarity search
+   */
+  async queryVectors(
+    projectId: string,
+    queryVector: number[],
+    topK: number = 5
+  ): Promise<{ matches: Array<{ id: string; score: number; metadata: Record<string, any> }> }> {
+    try {
+      const index = await this.getProjectIndex(projectId);
+      
+      const queryResponse = await index.query({
+        vector: queryVector,
+        topK: topK,
+        includeMetadata: true,
+        filter: {
+          projectId: { $eq: projectId }
+        }
+      });
+
+      return {
+        matches: queryResponse.matches?.map(match => ({
+          id: match.id,
+          score: match.score || 0,
+          metadata: match.metadata || {}
+        })) || []
+      };
+    } catch (error) {
+      throw new BadRequestException(`Failed to query vectors: ${error.message}`);
+    }
+  }
+
 }

@@ -32,16 +32,24 @@ export class EmbeddingService {
       throw new BadRequestException('No texts provided for embedding');
     }
 
+    // Validate input - ensure no empty strings or null values
+    const validTexts = texts.filter(text => text && text.trim() !== '');
+    
+    if (validTexts.length === 0) {
+      throw new BadRequestException('No valid text content for embedding');
+    }
+
     try {
       const response = await this.openai.embeddings.create({
-        model: modelName,
-        input: texts,
+        model: modelName || this.defaultModel,
+        input: validTexts,
         encoding_format: 'float',
         dimensions: this.defaultDimensions,
       });
 
       return response.data.map(item => item.embedding);
     } catch (error) {
+      console.error('OpenAI API Error:', error);
       throw new BadRequestException(
         `Failed to generate embeddings: ${error.message}`
       );
