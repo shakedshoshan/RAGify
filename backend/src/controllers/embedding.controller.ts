@@ -116,37 +116,4 @@ export class EmbeddingController {
       );
     }
   }
-
-  /**
-   * Get all project embedding documents for a project
-   * @param projectId The project ID to get embedding documents for
-   */
-  @Get('project/:projectId/documents')
-  async getProjectEmbeddingDocuments(
-    @Param('projectId') projectId: string
-  ): Promise<{ success: boolean; message: string; data: any }> {
-    try {
-      const stats = await this.pineconeService.getIndexStats(projectId);
-      
-      return {
-        success: true,
-        message: 'Project embedding documents retrieved successfully',
-        data: stats,
-      };
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Failed to retrieve project embedding documents',
-          error: error.message,
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
-
 }
