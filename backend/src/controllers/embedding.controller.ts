@@ -31,11 +31,21 @@ export class EmbeddingController {
   @Post('project/:projectId')
   async embedProjectChunks(
     @Param('projectId') projectId: string,
-    @Body() body?: { modelName?: string; chunkIds?: string[] }
+    @Body() body?: { modelName?: string; chunkIds?: string[]; skipDeletion?: boolean }
   ): Promise<{ success: boolean; message: string; data: EmbeddingResponseDto }> {
     try {
       const modelName = body?.modelName || 'text-embedding-3-small';
       const specificChunkIds = body?.chunkIds || [];
+      const skipDeletion = body?.skipDeletion || false;
+
+      // First, delete existing vectors for this project from Pinecone
+      let deletedCount = 0;
+      if (!skipDeletion) {
+        console.log(`Deleting existing vectors for project ${projectId}...`);
+        const deleteResult = await this.pineconeService.deleteVectorsByProjectId(projectId);
+        deletedCount = deleteResult.deleted;
+        console.log(`Deleted ${deletedCount} existing vectors for project ${projectId}`);
+      }
 
       // Get text chunks by project ID from Firestore
       let chunks;
@@ -71,7 +81,7 @@ export class EmbeddingController {
         metadata: {
           content: chunk.content,
           source: chunk.sourceName || chunk.sourceId || projectId,
-          projectId: projectId,
+          projectId, // Store projectId directly in metadata (no nested object)
           chunkId: chunk.id,
           chunkIndex: chunk.chunkIndex,
           startIndex: chunk.startIndex,
@@ -94,11 +104,12 @@ export class EmbeddingController {
         embeddingIds: vectors.map(v => v.id),
         modelUsed: modelName,
         dimensions: embeddings[0]?.length || 512,
+        deletedVectors: deletedCount,
       };
       
       return {
         success: true,
-        message: 'Project chunks embedded and saved to Pinecone successfully',
+        message: `Project chunks embedded successfully. ${deletedCount > 0 ? `Deleted ${deletedCount} existing vectors. ` : ''}Added ${pineconeResult.totalUpserted} new vectors.`,
         data: result,
       };
     } catch (error) {

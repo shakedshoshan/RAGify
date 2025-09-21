@@ -16,6 +16,7 @@ export class EmbeddingRequestDto {
   projectId: string;
   modelName?: string; // Default: 'text-embedding-3-small'
   chunkIds?: string[]; // Optional: specific chunk IDs to embed, if not provided, embeds all chunks for project
+  skipDeletion?: boolean; // Optional: if true, won't delete existing vectors before embedding
 }
 
 export class ProjectEmbeddingDocumentDto {
@@ -38,4 +39,5 @@ export class EmbeddingResponseDto {
   embeddingIds: string[];
   modelUsed: string;
   dimensions: number;
+  deletedVectors?: number; // Number of vectors deleted before embedding
 }
