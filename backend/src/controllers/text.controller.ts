@@ -15,12 +15,14 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { TextPayloadDto } from '../dto/text-payload.dto';
 import { FirestoreService } from '../services/firestore.service';
 import { CsvService } from '../services/csv.service';
+import { PdfService } from '../services/pdf.service';
 
 @Controller('text')
 export class TextController {
   constructor(
     private readonly firestoreService: FirestoreService,
-    private readonly csvService: CsvService
+    private readonly csvService: CsvService,
+    private readonly pdfService: PdfService
   ) {}
 
   @Post()
@@ -133,6 +135,104 @@ export class TextController {
         {
           success: false,
           message: 'Failed to process CSV file',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post('upload-pdf')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (req, file, callback) => {
+        // Log file information for debugging
+        console.log('Received file:', {
+          fieldname: file.fieldname,
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size
+        });
+        
+        // Accept only PDF files
+        if (file.mimetype === 'application/pdf' || 
+            file.originalname.toLowerCase().endsWith('.pdf') ||
+            file.mimetype === 'application/octet-stream') { // Some browsers may send this for PDFs
+          callback(null, true);
+        } else {
+          console.log('Rejected file with mimetype:', file.mimetype);
+          callback(new BadRequestException(`Only PDF files are allowed. Got mimetype: ${file.mimetype}`), false);
+        }
+      },
+      limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB limit
+      },
+    })
+  )
+  async uploadPDF(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('project_id') projectId: string,
+    @Query('name') name?: string,
+  ) {
+    try {
+      console.log('PDF upload endpoint called with project_id:', projectId, 'name:', name);
+      
+      // Validate file exists
+      if (!file) {
+        console.error('No file received in the request');
+        throw new BadRequestException('No file uploaded');
+      }
+      
+      console.log('File received:', {
+        filename: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype
+      });
+
+      // Validate project_id
+      if (!projectId) {
+        throw new BadRequestException('project_id is required');
+      }
+
+      // Parse PDF and extract text
+      const pdfResult = await this.pdfService.parsePdf(file.buffer);
+      
+      // Clean the extracted text
+      const cleanedText = this.pdfService.cleanText(pdfResult.text);
+      
+      // Create text payload
+      const textPayload: TextPayloadDto = {
+        project_id: projectId,
+        name: name || file.originalname.replace('.pdf', ''),
+        text: cleanedText
+      };
+
+      // Save to Firestore
+      const docRef = await this.firestoreService.addDocument('rawText', textPayload);
+      
+      return {
+        success: true,
+        id: docRef.id,
+        message: 'PDF file processed and saved successfully',
+        data: {
+          id: docRef.id,
+          filename: file.originalname,
+          size: file.size,
+          pageCount: pdfResult.pageCount,
+          textContent: cleanedText.substring(0, 500) + (cleanedText.length > 500 ? '...' : ''), // Preview of text
+          project_id: projectId,
+          name: textPayload.name
+        },
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Failed to process PDF file',
           error: error.message,
         },
         HttpStatus.INTERNAL_SERVER_ERROR

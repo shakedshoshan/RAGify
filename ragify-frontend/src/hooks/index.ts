@@ -10,6 +10,10 @@ export type { DeleteTextResponse } from './useDeleteText';
 export { useCsvUpload } from './useCsvUpload';
 export type { CsvUploadOptions, CsvUploadResponse } from './useCsvUpload';
 
+// Export the PDF upload hook and types
+export { usePdfUpload } from './usePdfUpload';
+export type { PdfUploadOptions, PdfUploadResponse } from './usePdfUpload';
+
 // Export individual project hooks
 export { useCreateProject } from './project_hooks/useCreateProject';
 export { useGetProject } from './project_hooks/useGetProject';

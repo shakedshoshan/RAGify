@@ -10,6 +10,7 @@ import { GenerationController } from './controllers/generation.controller';
 import { FirestoreService } from './services/firestore.service';
 import { ProjectService } from './services/project.service';
 import { CsvService } from './services/csv.service';
+import { PdfService } from './services/pdf.service';
 import { ChunkingService } from './services/chunking.service';
 import { EmbeddingService } from './services/embedding.service';
 import { PineconeService } from './services/pinecone.service';
@@ -26,6 +27,6 @@ import pineconeConfig from './config/pinecone.config';
     }),
   ],
   controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, GenerationController],
-  providers: [AppService, FirestoreService, ProjectService, CsvService, ChunkingService, EmbeddingService, PineconeService, GenerationService, RetrievalService],
+  providers: [AppService, FirestoreService, ProjectService, CsvService, PdfService, ChunkingService, EmbeddingService, PineconeService, GenerationService, RetrievalService],
 })
 export class AppModule {}

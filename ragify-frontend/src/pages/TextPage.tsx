@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { useText, useCsvUpload, type TextPayload, type CsvUploadOptions } from '../hooks';
+import { useText, useCsvUpload, usePdfUpload, type TextPayload, type CsvUploadOptions, type PdfUploadOptions } from '../hooks';
 
 const TextPage: React.FC = () => {
   const { createText, isLoading, error, clearError } = useText();
   const { uploadCsv, isLoading: isCsvLoading, error: csvError, clearError: clearCsvError } = useCsvUpload();
+  const { uploadPdf, isLoading: isPdfLoading, error: pdfError, clearError: clearPdfError } = usePdfUpload();
   
   // Tab state
-  const [activeTab, setActiveTab] = useState<'text' | 'csv'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'csv' | 'pdf'>('text');
   
   // Text form state
   const [formData, setFormData] = useState<TextPayload>({
@@ -25,6 +26,14 @@ const TextPage: React.FC = () => {
     file: null,
   });
   const [csvResult, setCsvResult] = useState<{ success: boolean; message: string; id?: string; data?: any } | null>(null);
+
+  // PDF upload state
+  const [pdfFormData, setPdfFormData] = useState<PdfUploadOptions & { file: File | null }>({
+    project_id: '',
+    name: '',
+    file: null,
+  });
+  const [pdfResult, setPdfResult] = useState<{ success: boolean; message: string; id?: string; data?: any } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,6 +102,42 @@ const TextPage: React.FC = () => {
     }
   };
 
+  const handlePdfSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearPdfError();
+    setPdfResult(null);
+
+    // Basic validation
+    if (!pdfFormData.project_id.trim() || !pdfFormData.file) {
+      setPdfResult({ success: false, message: 'Please fill in project ID and select a PDF file' });
+      return;
+    }
+
+    const response = await uploadPdf(pdfFormData.file, {
+      project_id: pdfFormData.project_id,
+      name: pdfFormData.name || pdfFormData.file.name,
+    });
+
+    if (response) {
+      setPdfResult({ 
+        success: true, 
+        message: 'PDF uploaded successfully!', 
+        id: response.id,
+        data: response.data
+      });
+      setPdfFormData({ 
+        project_id: '', 
+        name: '', 
+        file: null 
+      });
+    } else {
+      setPdfResult({ 
+        success: false, 
+        message: 'Failed to upload PDF. Please try again.' 
+      });
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -118,6 +163,23 @@ const TextPage: React.FC = () => {
     }));
   };
 
+  const handlePdfChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    setPdfFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    }));
+  };
+
+  const handlePdfFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setPdfFormData(prev => ({
+      ...prev,
+      file,
+      name: file ? file.name.replace('.pdf', '') : '',
+    }));
+  };
+
   const handleClear = () => {
     setFormData({ project_id: '', name: '', text: '' });
     setResult(null);
@@ -134,6 +196,16 @@ const TextPage: React.FC = () => {
     });
     setCsvResult(null);
     clearCsvError();
+  };
+
+  const handlePdfClear = () => {
+    setPdfFormData({ 
+      project_id: '', 
+      name: '', 
+      file: null 
+    });
+    setPdfResult(null);
+    clearPdfError();
   };
 
   return (
@@ -179,13 +251,26 @@ const TextPage: React.FC = () => {
                 </svg>
                 CSV Upload
               </button>
+              <button
+                onClick={() => setActiveTab('pdf')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'pdf'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                PDF Upload
+              </button>
             </nav>
           </div>
         </div>
 
         {/* Tab Content */}
         <div className="bg-white rounded-b-xl shadow-lg p-8">
-          {activeTab === 'text' ? (
+          {activeTab === 'text' && (
             /* Text Input Tab */
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Project ID Field */}
@@ -272,7 +357,9 @@ const TextPage: React.FC = () => {
                 </button>
               </div>
             </form>
-          ) : (
+          )}
+
+          {activeTab === 'csv' && (
             /* CSV Upload Tab */
             <form onSubmit={handleCsvSubmit} className="space-y-6">
               {/* Project ID Field */}
@@ -409,6 +496,108 @@ const TextPage: React.FC = () => {
             </form>
           )}
 
+          {activeTab === 'pdf' && (
+            /* PDF Upload Tab */
+            <form onSubmit={handlePdfSubmit} className="space-y-6">
+              {/* Project ID Field */}
+              <div>
+                <label htmlFor="pdf_project_id" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Project ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="pdf_project_id"
+                  name="project_id"
+                  value={pdfFormData.project_id}
+                  onChange={handlePdfChange}
+                  placeholder="Enter your project ID"
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+
+              {/* File Upload Field */}
+              <div>
+                <label htmlFor="pdf_file" className="block text-sm font-semibold text-gray-700 mb-2">
+                  PDF File <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
+                  <div className="space-y-1 text-center">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <div className="flex text-sm text-gray-600">
+                      <label htmlFor="pdf_file" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                        <span>Upload a file</span>
+                        <input
+                          id="pdf_file"
+                          name="file"
+                          type="file"
+                          accept=".pdf"
+                          onChange={handlePdfFileChange}
+                          className="sr-only"
+                        />
+                      </label>
+                      <p className="pl-1">or drag and drop</p>
+                    </div>
+                    <p className="text-xs text-gray-500">PDF files only, up to 50MB</p>
+                  </div>
+                </div>
+                {pdfFormData.file && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    Selected: <span className="font-medium">{pdfFormData.file.name}</span> ({(pdfFormData.file.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                )}
+              </div>
+
+              {/* Name Field */}
+              <div>
+                <label htmlFor="pdf_name" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Name (optional)
+                </label>
+                <input
+                  type="text"
+                  id="pdf_name"
+                  name="name"
+                  value={pdfFormData.name}
+                  onChange={handlePdfChange}
+                  placeholder="Enter a name for your PDF (defaults to filename)"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <button
+                  type="submit"
+                  disabled={isPdfLoading}
+                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold py-3 px-6 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center"
+                >
+                  {isPdfLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing PDF...
+                    </>
+                  ) : (
+                    'Upload PDF'
+                  )}
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handlePdfClear}
+                  disabled={isPdfLoading}
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 font-semibold py-3 px-6 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200"
+                >
+                  Clear Form
+                </button>
+              </div>
+            </form>
+          )}
+
           {/* Error Display for Text Tab */}
           {activeTab === 'text' && error && (
             <div className="mt-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-r-lg">
@@ -446,6 +635,29 @@ const TextPage: React.FC = () => {
                   <p className="mt-1 text-sm text-red-700">{csvError}</p>
                   <button
                     onClick={clearCsvError}
+                    className="mt-2 text-sm text-red-600 hover:text-red-500 underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error Display for PDF Tab */}
+          {activeTab === 'pdf' && pdfError && (
+            <div className="mt-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-r-lg">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Error</h3>
+                  <p className="mt-1 text-sm text-red-700">{pdfError}</p>
+                  <button
+                    onClick={clearPdfError}
                     className="mt-2 text-sm text-red-600 hover:text-red-500 underline"
                   >
                     Dismiss
@@ -533,6 +745,60 @@ const TextPage: React.FC = () => {
                       <div className="mt-2 text-xs text-gray-600">
                         <p>Rows: {csvResult.data.rowCount}</p>
                         <p>Headers: {csvResult.data.headers?.join(', ')}</p>
+                      </div>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success/Result Display for PDF Tab */}
+          {activeTab === 'pdf' && pdfResult && (
+            <div className={`mt-6 p-4 rounded-lg border-l-4 ${
+              pdfResult.success 
+                ? 'bg-green-50 border-green-400' 
+                : 'bg-yellow-50 border-yellow-400'
+            }`}>
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  {pdfResult.success ? (
+                    <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <div className="ml-3">
+                  <h3 className={`text-sm font-medium ${
+                    pdfResult.success ? 'text-green-800' : 'text-yellow-800'
+                  }`}>
+                    {pdfResult.success ? 'Success!' : 'Warning'}
+                  </h3>
+                  <p className={`mt-1 text-sm ${
+                    pdfResult.success ? 'text-green-700' : 'text-yellow-700'
+                  }`}>
+                    {pdfResult.message}
+                    {pdfResult.id && (
+                      <span className="block mt-1 font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                        ID: {pdfResult.id}
+                      </span>
+                    )}
+                    {pdfResult.data && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        <p>Pages: {pdfResult.data.pageCount}</p>
+                        <p>Size: {(pdfResult.data.size / 1024 / 1024).toFixed(2)} MB</p>
+                        {pdfResult.data.textContent && (
+                          <details className="mt-1">
+                            <summary className="cursor-pointer text-blue-600 hover:text-blue-800">Preview extracted text</summary>
+                            <div className="mt-1 p-2 bg-gray-50 rounded text-xs max-h-32 overflow-y-auto">
+                              {pdfResult.data.textContent}
+                            </div>
+                          </details>
+                        )}
                       </div>
                     )}
                   </p>
