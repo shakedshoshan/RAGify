@@ -169,11 +169,17 @@ export class RagPrepareController {
         100
       );
 
+      // Step 5: Delete chunks from Firebase after successful Pinecone storage
+      console.log(`🗑️ Deleting chunks from Firebase for project ${projectId}...`);
+      const deletedChunksCount = await this.chunkingService.deleteExistingChunks(projectId);
+      console.log(`✨ Successfully deleted ${deletedChunksCount} chunks from Firebase`);
+
       // Publish final success event
       await this.safePublishToKafka('embeddings-ingested', {
         projectId,
         vectorCount: pineconeResult.totalUpserted,
         success: true,
+        chunksDeleted: deletedChunksCount,
         timestamp: new Date().toISOString(),
       });
 
@@ -181,7 +187,7 @@ export class RagPrepareController {
 
       return {
         success: true,
-        message: `RAG system prepared successfully. ${deleteResult.deleted > 0 ? `Deleted ${deleteResult.deleted} existing vectors. ` : 'No existing vectors found. '}Added ${pineconeResult.totalUpserted} new vectors.`,
+        message: `RAG system prepared successfully. ${deleteResult.deleted > 0 ? `Deleted ${deleteResult.deleted} existing vectors. ` : 'No existing vectors found. '}Added ${pineconeResult.totalUpserted} new vectors. Deleted ${deletedChunksCount} chunks from Firebase.`,
         data: {
           projectId,
           processedTexts: chunkingResult.processedTexts,
@@ -190,6 +196,7 @@ export class RagPrepareController {
           embeddingsGenerated: embeddings.length,
           vectorsStored: pineconeResult.totalUpserted,
           deletedVectors: deleteResult.deleted,
+          deletedChunks: deletedChunksCount,
           deletionSuccess: deleteResult.success,
           modelUsed: modelName,
           dimensions: embeddings[0]?.length || 512,
