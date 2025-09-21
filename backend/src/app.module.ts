@@ -58,7 +58,10 @@ export class AppModule implements OnModuleInit {
       await this.kafkaService.ensureTopics([
         'documents-chunked',
         'chunks-embedded', 
-        'embeddings-ingested'
+        'embeddings-ingested',
+        'queries-received',
+        'contexts-retrieved',
+        'responses-generated'
       ]);
       
       console.log('✅ Kafka service initialized successfully');
