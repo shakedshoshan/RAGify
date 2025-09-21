@@ -15,29 +15,44 @@ export class ChunkingController {
   /**
    * Process all raw text documents for a project and chunk them.
    * By default, existing chunks for the project will be deleted first.
+   * 
    * @param projectId The project ID to process
    * @param body Optional chunking parameters including:
-   *   - chunkSize: Size of each chunk in characters
-   *   - chunkOverlap: Overlap between chunks in characters
+   *   - chunkSize: Size of each chunk in characters (default: 500)
+   *   - chunkOverlap: Overlap between chunks in characters (default: 15% of chunkSize)
    *   - deleteExisting: Whether to delete existing chunks (defaults to true)
+   *   - chunkingStrategy: Strategy for chunking ('semantic', 'fixed', or 'hybrid')
+   *     - semantic: Uses natural text boundaries like paragraphs and sentences (default)
+   *     - fixed: Uses fixed-size chunks regardless of content
+   *     - hybrid: Combines both approaches for balanced results
    */
   @Post('project/:projectId')
   async chunkProjectTexts(
     @Param('projectId') projectId: string,
     @Body() chunkingParams?: { 
-      chunkSize?: number; 
-      chunkOverlap?: number;
-      deleteExisting?: boolean;
+      chunkSize?: number;           // Size of each chunk in characters (default: 500)
+      chunkOverlap?: number;        // Overlap between chunks (default: 15% of chunkSize)
+      deleteExisting?: boolean;     // Whether to delete existing chunks (default: true)
+      chunkingStrategy?: 'semantic' | 'fixed' | 'hybrid'; // Chunking strategy to use (default: semantic)
     }
   ) {
     try {
-      // Extract parameters
-      const { chunkSize, chunkOverlap, deleteExisting = true } = chunkingParams || {};
+      // Extract parameters with defaults
+      const { 
+        chunkSize, 
+        chunkOverlap, 
+        deleteExisting = true,
+        chunkingStrategy = 'semantic'
+      } = chunkingParams || {};
       
       // Always delete existing chunks by default (can be overridden by setting deleteExisting to false)
       const result = await this.chunkingService.chunkProjectTexts(
         projectId,
-        { chunkSize, chunkOverlap },
+        { 
+          chunkSize, 
+          chunkOverlap,
+          chunkingStrategy
+        },
         deleteExisting
       );
       
