@@ -6,11 +6,15 @@ import {
   HttpException, 
   HttpStatus
 } from '@nestjs/common';
+import { KafkaService } from '@toxicoder/nestjs-kafka';
 import { ChunkingService } from '../services/chunking.service';
 
 @Controller('chunking')
 export class ChunkingController {
-  constructor(private readonly chunkingService: ChunkingService) {}
+  constructor(
+    private readonly chunkingService: ChunkingService,
+    private readonly kafkaService: KafkaService,
+  ) {}
 
   /**
    * Process all raw text documents for a project and chunk them.
@@ -55,6 +59,21 @@ export class ChunkingController {
         },
         deleteExisting
       );
+
+      // Publish to documents-chunked topic
+      await this.kafkaService.send({
+        topic: 'documents-chunked',
+        messages: {
+          key: projectId,
+          value: {
+            projectId,
+            processedTexts: result.processedTexts,
+            totalChunks: result.totalChunks,
+            chunkingStrategy: result.chunkingStrategy,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
       
       return {
         success: true,

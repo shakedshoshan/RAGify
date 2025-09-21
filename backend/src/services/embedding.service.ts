@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { KafkaService } from '@toxicoder/nestjs-kafka';
 import OpenAI from 'openai';
 import { FirestoreService } from './firestore.service';
 
@@ -11,7 +12,8 @@ export class EmbeddingService {
 
   constructor(
     private readonly firestoreService: FirestoreService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly kafkaService: KafkaService,
   ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!apiKey) {
@@ -92,5 +94,28 @@ export class EmbeddingService {
     }
     
     return chunks;
+  }
+
+  /**
+   * Publish embeddings ingested event to Kafka
+   */
+  async publishEmbeddingsIngested(projectId: string, vectorCount: number, success: boolean): Promise<void> {
+    try {
+      await this.kafkaService.send({
+        topic: 'embeddings-ingested',
+        messages: {
+          key: projectId,
+          value: {
+            projectId,
+            vectorCount,
+            success,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Failed to publish embeddings-ingested event:', error);
+      // Don't throw error to avoid breaking the main flow
+    }
   }
 }

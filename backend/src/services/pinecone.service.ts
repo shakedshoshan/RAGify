@@ -188,12 +188,14 @@ export class PineconeService {
     try {
       const index = await this.getProjectIndex(projectId);
       
-      // Query with simple filter - this should work with the way we're storing vectors
+      // Query with metadata filter for projectId
       const queryResponse = await index.query({
         vector: queryVector,
         topK: topK,
         includeMetadata: true,
-        filter: { projectId }
+        filter: {
+          projectId: { $eq: projectId }
+        }
       });
 
       return {
@@ -212,101 +214,125 @@ export class PineconeService {
    * Delete all vectors for a specific project using Pinecone filter API
    * Based on: https://docs.pinecone.io/reference/api/2024-07/data-plane/delete
    */
-  async deleteVectorsByProjectId(projectId: string): Promise<{ deleted: number }> {
+  async deleteVectorsByProjectId(projectId: string): Promise<{ deleted: number; success: boolean }> {
     try {
       const index = await this.getProjectIndex(projectId);
       
-      console.log(`Deleting all vectors for project ${projectId} using filter...`);
+      console.log(`🗑️ Deleting all vectors for project ${projectId}...`);
       
+      // Method 1: Try with metadata filter deletion (preferred method)
       try {
-        // Use the filter parameter to delete all vectors with matching projectId
-        // According to Pinecone docs, this is the most efficient way
-        const deleteResponse = await (index as any).delete({
+        await index.deleteMany({
+          projectId: { $eq: projectId }
+        });
+        
+        console.log(`✨ Successfully deleted vectors for project ${projectId} using metadata filter`);
+        
+        // Verify deletion by querying
+        const verifyQuery = await index.query({
+          vector: new Array(this.indexDimension).fill(0),
+          topK: 1,
+          includeMetadata: true,
           filter: {
-            projectId: { "$eq": projectId }
+            projectId: { $eq: projectId }
           }
         });
         
-        console.log(`Successfully deleted vectors for project ${projectId}`);
+        const remainingVectors = verifyQuery.matches?.length || 0;
+        console.log(`Verification: ${remainingVectors} vectors remaining for project ${projectId}`);
         
-        // Pinecone delete API doesn't return count, so we estimate
-        // You could query first to get count if needed, but that's less efficient
-        return { deleted: 1 }; // At least something was processed
+        return { deleted: remainingVectors === 0 ? 1 : 0, success: remainingVectors === 0 };
         
       } catch (filterError) {
-        console.warn(`Filter-based deletion failed: ${filterError.message}`);
+        console.warn(`Metadata filter deletion failed: ${filterError.message}`);
         
-        // Fallback: try with simple filter format
+        // Method 2: Query-then-delete approach with improved batch handling
+        console.log(`🔄 Falling back to query-then-delete approach...`);
+        
         try {
-          const deleteResponse = await (index as any).delete({
-            filter: {
-              projectId: projectId
-            }
-          });
+          // First, get count of vectors to delete
+          let allVectorIds: string[] = [];
+          let hasMore = true;
+          let queryVector = new Array(this.indexDimension).fill(0);
           
-          console.log(`Successfully deleted vectors for project ${projectId} with simple filter`);
-          return { deleted: 1 };
-          
-        } catch (simpleFilterError) {
-          console.warn(`Simple filter deletion failed: ${simpleFilterError.message}`);
-          
-          // Last resort: query first, then delete by IDs
-          try {
-            console.log(`Falling back to query-then-delete approach for project ${projectId}`);
-            
-            // Create a dummy query vector to search with
-            const dummyVector = new Array(this.indexDimension).fill(0);
-            
-            // Query to get vector IDs
+          // Query in chunks to get all vector IDs
+          while (hasMore && allVectorIds.length < 10000) { // Safety limit
             const queryResponse = await index.query({
-              vector: dummyVector,
-              topK: 10000,
+              vector: queryVector,
+              topK: 1000, // Smaller batch for querying
               includeMetadata: true,
-              filter: { projectId }
+              filter: {
+                projectId: { $eq: projectId }
+              }
             });
-            
+
             if (!queryResponse.matches || queryResponse.matches.length === 0) {
-              console.log(`No vectors found for project ${projectId}`);
-              return { deleted: 0 };
+              hasMore = false;
+              break;
             }
+
+            const batchIds = queryResponse.matches.map(match => match.id);
+            allVectorIds.push(...batchIds);
             
-            // Extract IDs and delete in smaller batches
-            const vectorIds = queryResponse.matches.map(match => match.id);
-            console.log(`Found ${vectorIds.length} vectors for project ${projectId}`);
+            // If we got less than requested, we're done
+            if (queryResponse.matches.length < 1000) {
+              hasMore = false;
+            }
+          }
+
+          if (allVectorIds.length === 0) {
+            console.log(`No vectors found for project ${projectId}`);
+            return { deleted: 0, success: true };
+          }
+
+          console.log(`Found ${allVectorIds.length} vectors to delete for project ${projectId}`);
+
+          // Delete by IDs in smaller batches to avoid the "illegal condition" error
+          let totalDeleted = 0;
+          let failedBatches = 0;
+          const batchSize = 50; // Reduced batch size to avoid API limits
+
+          for (let i = 0; i < allVectorIds.length; i += batchSize) {
+            const batch = allVectorIds.slice(i, i + batchSize);
             
-            let totalDeleted = 0;
-            const batchSize = 100; // Smaller batches to avoid API limits
-            
-            for (let i = 0; i < vectorIds.length; i += batchSize) {
-              const batch = vectorIds.slice(i, i + batchSize);
+            try {
+              // Use the correct deleteMany syntax for IDs
+              await index.deleteMany(batch);
               
-              try {
-                // Use the delete API with ids parameter
-                await (index as any).delete({
-                  ids: batch
-                });
-                
-                totalDeleted += batch.length;
-                console.log(`Deleted batch of ${batch.length} vectors`);
-                
-                // Small delay to avoid rate limiting
-                if (i + batchSize < vectorIds.length) {
-                  await new Promise(resolve => setTimeout(resolve, 100));
-                }
-              } catch (batchError) {
-                console.warn(`Failed to delete batch: ${batchError.message}`);
+              totalDeleted += batch.length;
+              console.log(`✅ Deleted batch of ${batch.length} vectors (${totalDeleted}/${allVectorIds.length})`);
+              
+              // Longer delay between batches to avoid rate limiting
+              if (i + batchSize < allVectorIds.length) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+            } catch (batchError) {
+              failedBatches++;
+              console.error(`❌ Failed to delete batch ${Math.floor(i/batchSize) + 1}: ${batchError.message}`);
+              
+              // If too many batches fail, stop and throw error
+              if (failedBatches > 3) {
+                throw new Error(`Too many batch deletions failed (${failedBatches}). Stopping deletion process.`);
               }
             }
-            
-            return { deleted: totalDeleted };
-            
-          } catch (queryError) {
-            console.error(`Query-then-delete approach failed: ${queryError.message}`);
-            throw new Error(`All deletion methods failed: ${queryError.message}`);
           }
+
+          if (failedBatches > 0) {
+            console.warn(`⚠️ Completed with ${failedBatches} failed batches. ${totalDeleted}/${allVectorIds.length} vectors deleted.`);
+          } else {
+            console.log(`✨ Successfully deleted ${totalDeleted} vectors for project ${projectId}`);
+          }
+          
+          const success = totalDeleted > 0 && failedBatches === 0;
+          return { deleted: totalDeleted, success };
+          
+        } catch (queryError) {
+          console.error(`❌ Query-then-delete approach failed: ${queryError.message}`);
+          throw new Error(`Failed to delete vectors using query-then-delete method: ${queryError.message}`);
         }
       }
     } catch (error) {
+      console.error(`❌ Failed to delete vectors:`, error);
       throw new BadRequestException(`Failed to delete vectors for project ${projectId}: ${error.message}`);
     }
   }

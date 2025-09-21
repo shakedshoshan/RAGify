@@ -87,6 +87,10 @@ The system follows a modular architecture with clear separation of concerns:
    PINECONE_INDEX_NAME=your_pinecone_index_name
    PINECONE_INDEX_HOST=your_pinecone_index_host
 
+   # Kafka Configuration
+   KAFKA_BROKERS=localhost:9092
+   KAFKA_CLIENT_ID=ragify-backend
+
    # Server Configuration
    PORT=5000
    ```
@@ -107,7 +111,7 @@ The system follows a modular architecture with clear separation of concerns:
 ### Step 3: Project Initialization
 
 1. **Create a Project**
-   ```bash
+```bash
    POST /projects
    {
      "user_id": "user123",
@@ -118,7 +122,7 @@ The system follows a modular architecture with clear separation of concerns:
 ### Step 4: Document Processing Pipeline
 
 1. **Upload Documents**
-   ```bash
+```bash
    # Upload PDF
    POST /text/upload-pdf
    # Upload CSV
@@ -148,7 +152,7 @@ The system follows a modular architecture with clear separation of concerns:
 ### Step 5: Query and Generation
 
 1. **Query the RAG System**
-   ```bash
+```bash
    POST /generation/generate
    {
      "prompt": "What is the main topic discussed in the documents?",

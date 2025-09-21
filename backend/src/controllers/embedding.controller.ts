@@ -7,6 +7,7 @@ import {
   HttpException, 
   HttpStatus
 } from '@nestjs/common';
+import { KafkaService } from '@toxicoder/nestjs-kafka';
 import { EmbeddingService } from '../services/embedding.service';
 import { 
   EmbeddingRequestDto, 
@@ -20,7 +21,8 @@ import { v4 as uuidv4 } from 'uuid';
 export class EmbeddingController {
   constructor(
     private readonly embeddingService: EmbeddingService,
-    private readonly pineconeService: PineconeService
+    private readonly pineconeService: PineconeService,
+    private readonly kafkaService: KafkaService,
   ) {}
 
   /**
@@ -96,6 +98,13 @@ export class EmbeddingController {
         100
       );
 
+      // Publish embeddings ingested event
+      await this.embeddingService.publishEmbeddingsIngested(
+        projectId, 
+        pineconeResult.totalUpserted, 
+        true
+      );
+
       // Prepare response data
       const result: EmbeddingResponseDto = {
         projectId,
@@ -106,6 +115,22 @@ export class EmbeddingController {
         dimensions: embeddings[0]?.length || 512,
         deletedVectors: deletedCount,
       };
+
+      // Publish to chunks-embedded topic
+      await this.kafkaService.send({
+        topic: 'chunks-embedded',
+        messages: {
+          key: projectId,
+          value: {
+            projectId,
+            processedChunks: chunks.length,
+            totalEmbeddings: pineconeResult.totalUpserted,
+            modelUsed: modelName,
+            dimensions: embeddings[0]?.length || 512,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
       
       return {
         success: true,
