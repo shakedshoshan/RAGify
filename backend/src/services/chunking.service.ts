@@ -212,17 +212,38 @@ export class ChunkingService {
   }
 
   /**
+   * Delete all existing chunks for a project
+   * @param projectId The project ID to delete chunks for
+   * @returns The number of deleted chunks
+   */
+  async deleteExistingChunks(projectId: string): Promise<number> {
+    return this.firestoreService.deleteChunksByProjectId(projectId);
+  }
+
+  /**
    * Process all raw text documents for a project and chunk them
+   * @param projectId The project ID to process
+   * @param chunkingParams Optional chunking parameters
+   * @param deleteExisting Whether to delete existing chunks before processing (default: false)
    */
   async chunkProjectTexts(
     projectId: string,
-    chunkingParams?: { chunkSize?: number; chunkOverlap?: number }
+    chunkingParams?: { chunkSize?: number; chunkOverlap?: number },
+    deleteExisting: boolean = false
   ): Promise<{
     projectId: string;
     processedTexts: number;
     totalChunks: number;
     chunkIds: string[];
+    deletedChunks?: number;
   }> {
+    let deletedChunks = 0;
+    
+    // Delete existing chunks if requested
+    if (deleteExisting) {
+      deletedChunks = await this.deleteExistingChunks(projectId);
+    }
+    
     // Get all raw text documents for the project
     const rawTexts = await this.firestoreService.getRawTextsByProjectId(projectId);
     
@@ -275,6 +296,7 @@ export class ChunkingService {
       processedTexts: rawTexts.length,
       totalChunks: totalChunks,
       chunkIds: allChunkIds,
+      deletedChunks: deletedChunks,
     };
   }
 }

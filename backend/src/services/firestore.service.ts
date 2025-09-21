@@ -241,4 +241,13 @@ export class FirestoreService {
     
     return deletedCount;
   }
+  
+  /**
+   * Delete all chunks for a specific project
+   * @param projectId The project ID to filter by
+   * @returns A promise that resolves to the number of deleted chunks
+   */
+  async deleteChunksByProjectId(projectId: string): Promise<number> {
+    return this.deleteDocumentsByFilter('textChunks', { project_id: projectId });
+  }
 }
