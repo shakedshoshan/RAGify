@@ -6,14 +6,16 @@ import {
   HttpException, 
   HttpStatus
 } from '@nestjs/common';
-import { KafkaService } from '@toxicoder/nestjs-kafka';
 import { ChunkingService } from '../services/chunking.service';
+import { KafkaProducerService } from '../kafka/producers/kafka-producer.service';
+import { DocumentsChunkedEventDto } from '../kafka/dto/kafka-event.dto';
+import { v4 as uuidv4 } from 'uuid';
 
 @Controller('chunking')
 export class ChunkingController {
   constructor(
     private readonly chunkingService: ChunkingService,
-    private readonly kafkaService: KafkaService,
+    private readonly kafkaProducerService: KafkaProducerService,
   ) {}
 
   /**
@@ -61,18 +63,16 @@ export class ChunkingController {
       );
 
       // Publish to documents-chunked topic
-      await this.kafkaService.send({
-        topic: 'documents-chunked',
-        messages: {
-          key: projectId,
-          value: {
-            projectId,
-            processedTexts: result.processedTexts,
-            totalChunks: result.totalChunks,
-            chunkingStrategy: result.chunkingStrategy,
-            timestamp: new Date().toISOString(),
-          },
-        },
+      await this.kafkaProducerService.publishDocumentsChunked({
+        projectId,
+        timestamp: new Date().toISOString(),
+        processedTexts: result.processedTexts,
+        totalChunks: result.totalChunks,
+        chunkingStrategy: result.chunkingStrategy as 'semantic' | 'fixed' | 'hybrid',
+        correlationId: uuidv4(),
+        metadata: {
+          processingTime: Date.now()
+        }
       });
       
       return {

@@ -18,7 +18,46 @@ import {
 export class KafkaProducerService {
   private readonly logger = new Logger(KafkaProducerService.name);
 
-  constructor(private readonly kafkaService: KafkaService) {}
+  private isConnected = false;
+  private connectionRetryCount = 0;
+  private readonly maxRetries = 10;
+  private readonly initialRetryDelay = 1000;
+  private readonly maxRetryDelay = 30000;
+
+  constructor(private readonly kafkaService: KafkaService) {
+    this.initializeProducer();
+  }
+
+  private async initializeProducer(): Promise<void> {
+    try {
+      await this.kafkaService.connect();
+      this.isConnected = true;
+      this.connectionRetryCount = 0;
+      this.logger.log('✅ Kafka producer connected successfully');
+    } catch (error) {
+      this.logger.error('❌ Failed to connect Kafka producer:', error.message);
+      await this.retryConnection();
+    }
+  }
+
+  private async retryConnection(): Promise<void> {
+    if (this.connectionRetryCount >= this.maxRetries) {
+      this.logger.error(`❌ Failed to connect after ${this.maxRetries} attempts. Giving up.`);
+      return;
+    }
+
+    const delay = Math.min(
+      this.initialRetryDelay * Math.pow(2, this.connectionRetryCount),
+      this.maxRetryDelay
+    );
+
+    this.logger.warn(`⏳ Retrying connection in ${delay}ms (attempt ${this.connectionRetryCount + 1}/${this.maxRetries})`);
+    
+    await new Promise(resolve => setTimeout(resolve, delay));
+    this.connectionRetryCount++;
+    
+    await this.initializeProducer();
+  }
 
   /**
    * Generic method to publish events to Kafka
@@ -28,6 +67,14 @@ export class KafkaProducerService {
     event: T,
     options?: Partial<KafkaProducerOptions>
   ): Promise<void> {
+    if (!this.isConnected) {
+      this.logger.warn(`⚠️ Kafka producer not connected. Attempting to reconnect...`);
+      await this.initializeProducer();
+      if (!this.isConnected) {
+        throw new Error('Kafka producer is not connected');
+      }
+    }
+
     try {
       const kafkaEvent: KafkaEvent<T> = {
         key: options?.key || event.projectId || 'default',
@@ -53,18 +100,31 @@ export class KafkaProducerService {
         projectId: event.projectId,
         event: event.constructor.name
       });
+
+      // If connection error, try to reconnect
+      if (error.message.includes('disconnected') || error.message.includes('not connected')) {
+        this.isConnected = false;
+        await this.initializeProducer();
+      }
       
       // Don't throw error - continue with the main flow
       // But log the error for monitoring
-      await this.publishProcessingError({
-        projectId: event.projectId,
-        timestamp: new Date().toISOString(),
-        errorType: 'KAFKA_PUBLISH_ERROR',
-        errorMessage: error.message,
-        service: 'KafkaProducerService',
-        operation: `publishEvent:${topic}`,
-        errorDetails: { topic, event: event.constructor.name }
-      });
+      try {
+        await this.publishProcessingError({
+          projectId: event.projectId,
+          timestamp: new Date().toISOString(),
+          errorType: 'KAFKA_PUBLISH_ERROR',
+          errorMessage: error.message,
+          service: 'KafkaProducerService',
+          operation: `publishEvent:${topic}`,
+          errorDetails: { topic, event: event.constructor.name }
+        });
+      } catch (errorPublishError) {
+        this.logger.error(`💥 Critical: Failed to publish error event`, {
+          originalError: error.message,
+          publishError: errorPublishError.message
+        });
+      }
     }
   }
 

@@ -5,7 +5,7 @@ import { AppService } from './app.service';
 import { TextController } from './controllers/text.controller';
 import { ProjectController } from './controllers/project.controller';
 import { ChunkingController } from './controllers/chunking.controller';
-// import { EmbeddingController } from './controllers/embedding.controller';
+import { EmbeddingController } from './controllers/embedding.controller';
 import { GenerationController } from './controllers/generation.controller';
 import { RagPrepareController } from './controllers/rag-prepare.controller';
 import { KafkaHealthController } from './controllers/kafka-health.controller';
@@ -31,7 +31,7 @@ import { KafkaHealthService } from './kafka/kafka-health.service';
     }),
     KafkaModule,
   ],
-  controllers: [AppController, TextController, ProjectController, ChunkingController, GenerationController, RagPrepareController, KafkaHealthController],
+  controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, GenerationController, RagPrepareController, KafkaHealthController],
   providers: [AppService, FirestoreService, ProjectService, CsvService, PdfService, ChunkingService, EmbeddingService, PineconeService, GenerationService, RetrievalService],
 })
 export class AppModule implements OnModuleInit {
