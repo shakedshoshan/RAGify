@@ -15,5 +15,3 @@ export * from './dto/kafka-event.dto';
 // Interfaces
 export * from './events/kafka-event.interface';
 
-// Types
-export type { KafkaHealthStatus } from './kafka-health.service';

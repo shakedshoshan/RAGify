@@ -5,6 +5,7 @@ import { KafkaProducerService } from './producers/kafka-producer.service';
 import { KafkaConsumerService } from './consumers/kafka-consumer.service';
 import { KafkaHealthService } from './kafka-health.service';
 
+
 @Global()
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { KafkaHealthService } from './kafka-health.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        brokers: [configService.get<string>('KAFKA_BROKERS') || 'localhost:29092'],
+        brokers: [process.env.KAFKA_BROKERS || 'localhost:29092'], // Use OUTSIDE listener for local dev
         clientId: configService.get<string>('KAFKA_CLIENT_ID') || 'ragify-backend',
         topicAutoCreate: true,
         retry: {

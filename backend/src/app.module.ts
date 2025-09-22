@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -21,8 +21,10 @@ import { RetrievalService } from './services/retrieval.service';
 import firebaseConfig from './config/firebase.config';
 import pineconeConfig from './config/pinecone.config';
 import { KafkaModule } from './kafka/kafka.module';
+import { RagConsumersModule } from './kafka/consumers/rag-consumers.module';
 import { KafkaHealthService } from './kafka/kafka-health.service';
 
+@Global()
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -30,17 +32,19 @@ import { KafkaHealthService } from './kafka/kafka-health.service';
       load: [firebaseConfig, pineconeConfig],
     }),
     KafkaModule,
+    RagConsumersModule,
   ],
   controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, GenerationController, RagPrepareController, KafkaHealthController],
   providers: [AppService, FirestoreService, ProjectService, CsvService, PdfService, ChunkingService, EmbeddingService, PineconeService, GenerationService, RetrievalService],
+  exports: [ChunkingService, EmbeddingService, PineconeService, FirestoreService, ProjectService, CsvService, PdfService, GenerationService, RetrievalService],
 })
 export class AppModule implements OnModuleInit {
   constructor(private readonly kafkaHealthService: KafkaHealthService) {}
 
   async onModuleInit() {
     try {
-      // Initialize Kafka topics
-      await this.kafkaHealthService.initializeTopics();
+      // Initialize Kafka health monitoring
+      await this.kafkaHealthService.initializeHealthMonitoring();
       
       // Perform initial health check
       const healthStatus = await this.kafkaHealthService.checkHealth();

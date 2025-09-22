@@ -1,186 +1,121 @@
-# RAGify Kafka Integration
+# RAGify Kafka Architecture
 
-This directory contains the organized Kafka integration for the RAGify backend application, following Apache Kafka best practices and clean architecture principles.
+## Overview
 
-## 📁 Structure
+RAGify uses Apache Kafka for reliable, asynchronous communication between services in the RAG (Retrieval Augmented Generation) pipeline. This document describes the Kafka-based architecture and how it's implemented.
 
-```
-kafka/
-├── consumers/           # Kafka consumers for processing events
-├── producers/          # Kafka producers for publishing events  
-├── topics/            # Topic definitions and configurations
-├── dto/               # Data Transfer Objects for events
-├── events/            # Event interfaces and types
-├── kafka.module.ts    # Main Kafka module
-├── kafka-health.service.ts  # Health monitoring service
-└── index.ts          # Exports for easy importing
-```
+## Architecture
 
-## 🚀 Key Features
+The RAG preparation flow is now fully event-driven, with each step triggered by events published to Kafka topics:
 
-### 1. **Organized Topic Management**
-- Centralized topic definitions in `topics/kafka-topics.enum.ts`
-- Proper naming convention: `ragify.domain.event-type`
-- Configurable partitions, replication, and retention policies
+1. **Document Chunking**: Initiated by API request, chunks documents and publishes a `DOCUMENTS_CHUNKED` event
+2. **Embedding Generation**: Triggered by `DOCUMENTS_CHUNKED` events, generates embeddings and publishes a `CHUNKS_EMBEDDED` event
+3. **Vector Storage**: Triggered by `CHUNKS_EMBEDDED` events, stores vectors in Pinecone and publishes an `EMBEDDINGS_INGESTED` event
+4. **Cleanup**: Triggered by `EMBEDDINGS_INGESTED` events, cleans up temporary chunks from Firebase
 
-### 2. **Type-Safe Event System**
-- Strongly typed DTOs for all events
-- Validation using class-validator decorators
-- Base event class with common fields (projectId, timestamp, correlationId)
+This decoupled architecture provides several benefits:
+- **Resilience**: Each step can fail and retry independently
+- **Scalability**: Steps can be scaled independently based on load
+- **Monitoring**: Events provide visibility into the pipeline's progress
+- **Asynchronous Processing**: Long-running tasks don't block the API
 
-### 3. **Producer Service**
-- Dedicated `KafkaProducerService` for publishing events
-- Error handling and retry logic
-- Automatic correlation ID generation
-- Health check capabilities
+## Kafka Topics
 
-### 4. **Consumer Framework** 
-- Event handler registration system
-- Automatic message processing with error handling
-- Graceful shutdown support
-- Performance monitoring
+| Topic | Description | Partitions | Retention |
+|-------|-------------|------------|-----------|
+| `ragify.documents.chunked` | Published when documents are chunked | 3 | 7 days |
+| `ragify.chunks.embedded` | Published when embeddings are generated | 3 | 7 days |
+| `ragify.embeddings.ingested` | Published when vectors are stored | 3 | 30 days |
+| `ragify.queries.received` | Published when queries are received | 5 | 30 days |
+| `ragify.contexts.retrieved` | Published when context is retrieved | 5 | 30 days |
+| `ragify.responses.generated` | Published when responses are generated | 5 | 30 days |
+| `ragify.processing.errors` | Published when errors occur | 2 | 90 days |
+| `ragify.system.metrics` | Published for system metrics | 2 | 30 days |
 
-### 5. **Health Monitoring**
-- Comprehensive health checks for connections, topics, and services
-- Status reporting (healthy/degraded/unhealthy)
-- Statistics and metrics collection
+## Consumer Services
 
-## 📊 Event Flows
+The system includes dedicated consumer services for each step of the RAG preparation flow:
 
-### RAG Preparation Flow
-```
-documents-chunked → chunks-embedded → embeddings-ingested
-```
+1. **ChunkingConsumer**: Listens for `DOCUMENTS_CHUNKED` events and generates embeddings
+2. **EmbeddingConsumer**: Listens for `CHUNKS_EMBEDDED` events and stores vectors in Pinecone
+3. **IngestionConsumer**: Listens for `EMBEDDINGS_INGESTED` events and cleans up temporary chunks
 
-### Query Processing Flow  
-```
-queries-received → contexts-retrieved → responses-generated
-```
+## Error Handling and Retry Logic
 
-### Error Handling
-```
-processing-errors (for all error events)
-system-metrics (for monitoring data)
-```
+The system includes robust error handling and retry logic:
 
-## 🔧 Usage Examples
+- **Exponential Backoff**: Failed operations are retried with increasing delays
+- **Configurable Retries**: Each operation can have custom retry configurations
+- **Error Tracking**: All errors are published to the `ragify.processing.errors` topic
+- **Correlation IDs**: All events include correlation IDs to track related events
 
-### Publishing Events
-```typescript
-import { KafkaProducerService } from './kafka/producers/kafka-producer.service';
+## Health Monitoring
 
-// In your service/controller
-constructor(private readonly kafkaProducer: KafkaProducerService) {}
+The system includes health check endpoints for monitoring Kafka connectivity:
 
-// Publish a document chunked event
-await this.kafkaProducer.publishDocumentsChunked({
-  projectId: 'project-123',
-  timestamp: new Date().toISOString(),
-  processedTexts: 5,
-  totalChunks: 150,
-  chunkingStrategy: 'semantic',
-  correlationId: uuidv4()
-});
+- `GET /health/kafka`: Overall Kafka health
+- `GET /health/kafka/producer`: Kafka producer health
+- `GET /health/kafka/consumer`: Kafka consumer health
+
+## Usage
+
+### Starting RAG Preparation
+
+```http
+POST /rag/prepare/:projectId
+{
+  "chunkSize": 1000,
+  "chunkOverlap": 200,
+  "chunkingStrategy": "semantic",
+  "modelName": "text-embedding-3-small"
+}
 ```
 
-### Health Monitoring
-```typescript
-import { KafkaHealthService } from './kafka/kafka-health.service';
+This initiates the RAG preparation flow by chunking documents and publishing a `DOCUMENTS_CHUNKED` event. The rest of the flow is handled asynchronously by Kafka consumers.
 
-// Check Kafka health
-const health = await this.kafkaHealthService.checkHealth();
-console.log(health.status); // 'healthy', 'degraded', or 'unhealthy'
+### Checking RAG Preparation Status
+
+```http
+GET /rag/status/:projectId/:correlationId
 ```
 
-### Event Handling
-```typescript
-import { KafkaConsumerService } from './kafka/consumers/kafka-consumer.service';
+This returns the status of the RAG preparation flow for a specific project and correlation ID.
 
-// Register custom event handler
-this.kafkaConsumerService.registerHandler(KafkaTopics.DOCUMENTS_CHUNKED, {
-  handle: async (event) => {
-    console.log('Processing chunked documents:', event.value);
-    // Your custom logic here
-  }
-});
+## Implementation Details
+
+### Controllers
+
+- **RagPrepareController**: Initiates the RAG preparation flow and provides status endpoints
+- **KafkaHealthController**: Provides health check endpoints for Kafka connectivity
+
+### Consumers
+
+- **ChunkingConsumer**: Processes `DOCUMENTS_CHUNKED` events
+- **EmbeddingConsumer**: Processes `CHUNKS_EMBEDDED` events
+- **IngestionConsumer**: Processes `EMBEDDINGS_INGESTED` events
+
+### Services
+
+- **KafkaProducerService**: Publishes events to Kafka topics
+- **KafkaConsumerService**: Consumes events from Kafka topics
+- **KafkaErrorHandler**: Handles errors and implements retry logic
+- **KafkaHealthService**: Provides health check functionality
+
+## Configuration
+
+Kafka configuration is managed through environment variables:
+
 ```
-
-## 📈 Topics Configuration
-
-| Topic | Partitions | Retention | Description |
-|-------|------------|-----------|-------------|
-| `ragify.documents.chunked` | 3 | 7 days | Document chunking completion |
-| `ragify.chunks.embedded` | 3 | 7 days | Embedding generation completion |
-| `ragify.embeddings.ingested` | 3 | 30 days | Vector storage completion |
-| `ragify.queries.received` | 5 | 30 days | User queries |
-| `ragify.contexts.retrieved` | 5 | 30 days | Retrieved contexts |
-| `ragify.responses.generated` | 5 | 30 days | Generated responses |
-| `ragify.processing.errors` | 2 | 90 days | Error events |
-| `ragify.system.metrics` | 2 | 30 days | System metrics |
-
-## 🛡️ Error Handling
-
-The system includes comprehensive error handling:
-
-1. **Producer Errors**: Automatic retry with exponential backoff
-2. **Consumer Errors**: Dead letter queue pattern (planned)
-3. **Connection Errors**: Health monitoring and alerting
-4. **Processing Errors**: Structured error events with full context
-
-## 🔍 Monitoring Endpoints
-
-Access these endpoints for monitoring:
-
-- `GET /kafka/health` - Current health status
-- `GET /kafka/stats` - Service statistics  
-- `GET /kafka/health/last` - Last health check result
-- `GET /kafka/topics/reset` - Reset topics (development only)
-
-## 🚦 Environment Variables
-
-Configure these environment variables:
-
-```env
 KAFKA_BROKERS=localhost:9092
 KAFKA_CLIENT_ID=ragify-backend
-KAFKA_CONSUMER_GROUP=ragify-consumers
+KAFKA_GROUP_ID=ragify-consumers
 ```
 
-## 🔄 Migration from Old Implementation
+## Deployment
 
-The old implementation in controllers has been refactored:
+For production deployments, consider:
 
-### Before
-```typescript
-// Direct Kafka service usage
-await this.kafkaService.send({
-  topic: 'documents-chunked',
-  messages: { key: projectId, value: data }
-});
-```
-
-### After  
-```typescript
-// Organized producer service
-await this.kafkaProducerService.publishDocumentsChunked({
-  projectId,
-  timestamp: new Date().toISOString(),
-  // ... typed event data
-});
-```
-
-## 📚 References
-
-- [Apache Kafka Documentation](https://kafka.apache.org/documentation/)
-- [@toxicoder/nestjs-kafka](https://www.npmjs.com/package/@toxicoder/nestjs-kafka)
-- [Kafka Best Practices](https://kafka.apache.org/documentation/#bestpractices)
-
-## 🤝 Contributing
-
-When adding new events:
-
-1. Define the topic in `topics/kafka-topics.enum.ts`
-2. Create the DTO in `dto/kafka-event.dto.ts`
-3. Add producer method in `producers/kafka-producer.service.ts`
-4. Register consumer handler in `consumers/kafka-consumer.service.ts`
-5. Update this README with the new event flow
+1. Using a managed Kafka service (e.g., Confluent Cloud, AWS MSK)
+2. Setting appropriate retention periods based on storage needs
+3. Configuring proper replication for fault tolerance
+4. Monitoring Kafka metrics for performance and health

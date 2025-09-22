@@ -13,6 +13,7 @@ import {
   ProcessingErrorEventDto,
   SystemMetricsEventDto
 } from '../dto/kafka-event.dto';
+import { KafkaConsumerService } from '../consumers/kafka-consumer.service';
 
 @Injectable()
 export class KafkaProducerService {
@@ -24,7 +25,10 @@ export class KafkaProducerService {
   private readonly initialRetryDelay = 1000;
   private readonly maxRetryDelay = 30000;
 
-  constructor(private readonly kafkaService: KafkaService) {
+  constructor(
+    private readonly kafkaService: KafkaService,
+    private readonly kafkaConsumerService: KafkaConsumerService
+  ) {
     this.initializeProducer();
   }
 
@@ -94,6 +98,14 @@ export class KafkaProducerService {
         timestamp: event.timestamp,
         correlationId: event.correlationId
       });
+
+      // Also process the event directly for development/testing
+      // This ensures the flow works even if Kafka consumers aren't properly configured
+      try {
+        await this.kafkaConsumerService.processEventDirectly(topic, kafkaEvent);
+      } catch (directProcessError) {
+        this.logger.warn(`⚠️ Direct event processing failed for ${topic}`, directProcessError.message);
+      }
     } catch (error) {
       this.logger.error(`❌ Failed to publish event to ${topic}`, {
         error: error.message,

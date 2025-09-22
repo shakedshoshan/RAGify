@@ -39,6 +39,7 @@ export class DocumentsChunkedEventDto extends BaseKafkaEventDto {
     chunkSize?: number;
     chunkOverlap?: number;
     processingTime?: number;
+    modelName?: string;
   };
 }
 
@@ -63,6 +64,16 @@ export class ChunksEmbeddedEventDto extends BaseKafkaEventDto {
   metadata?: {
     processingTime?: number;
     tokenCount?: number;
+    embeddings?: number[][];
+    chunks?: Array<{
+      id: string;
+      content: string;
+      sourceName?: string;
+      sourceId?: string;
+      chunkIndex?: number;
+      startIndex?: number;
+      endIndex?: number;
+    }>;
   };
 }
 

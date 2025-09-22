@@ -97,6 +97,19 @@ export class EmbeddingService {
   }
 
   /**
+   * Get embeddings by project ID from Firestore
+   */
+  async getEmbeddingsByProjectId(projectId: string): Promise<number[][]> {
+    const embeddings = await this.firestoreService.getEmbeddingsByProjectId(projectId);
+    
+    if (!embeddings || embeddings.length === 0) {
+      throw new NotFoundException(`No embeddings found for project ${projectId}`);
+    }
+    
+    return embeddings;
+  }
+
+  /**
    * Publish embeddings ingested event to Kafka
    */
   async publishEmbeddingsIngested(projectId: string, vectorCount: number, success: boolean): Promise<void> {
