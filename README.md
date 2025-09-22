@@ -12,7 +12,7 @@ The platform handles the entire RAG pipeline automatically: from data ingestion 
 A dedicated user dashboard to manage multiple RAG projects, view usage statistics, and access unique API keys.
 
 ### Diverse Data Ingestion
-Easily upload files (PDF, DOCX, TXT), crawl websites via URL, integrate with external APIs (e.g., Notion, Slack), or simply paste text directly into the platform.
+Easily upload files (PDF, CSV, TXT), crawl websites via URL, integrate with external APIs (e.g., Notion, Slack), or simply paste text directly into the platform.
 
 ### Custom Persona Configuration
 Define the "personality" of your RAG model, including its tone, response style, and specific instructions, to ensure a tailored user experience.
