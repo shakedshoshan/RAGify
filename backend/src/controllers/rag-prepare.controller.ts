@@ -6,10 +6,16 @@ import {
   HttpException, 
   HttpStatus
 } from '@nestjs/common';
-import { KafkaService } from '@toxicoder/nestjs-kafka';
 import { ChunkingService } from '../services/chunking.service';
 import { EmbeddingService } from '../services/embedding.service';
 import { PineconeService } from '../services/pinecone.service';
+import { KafkaProducerService } from '../kafka/producers/kafka-producer.service';
+import { 
+  DocumentsChunkedEventDto,
+  ChunksEmbeddedEventDto,
+  EmbeddingsIngestedEventDto,
+  ProcessingErrorEventDto
+} from '../kafka/dto/kafka-event.dto';
 import { v4 as uuidv4 } from 'uuid';
 
 @Controller('rag')
@@ -18,27 +24,9 @@ export class RagPrepareController {
     private readonly chunkingService: ChunkingService,
     private readonly embeddingService: EmbeddingService,
     private readonly pineconeService: PineconeService,
-    private readonly kafkaService: KafkaService,
+    private readonly kafkaProducerService: KafkaProducerService,
   ) {}
 
-  /**
-   * Safely publish message to Kafka topic
-   */
-  private async safePublishToKafka(topic: string, message: any): Promise<void> {
-    try {
-      await this.kafkaService.send({
-        topic,
-        messages: {
-          key: message.projectId || 'default',
-          value: message,
-        },
-      });
-      console.log(`✅ Successfully published to ${topic}:`, message);
-    } catch (error) {
-      console.error(`❌ Failed to publish to ${topic}:`, error.message);
-      // Don't throw error - continue with the main flow
-    }
-  }
 
   /**
    * Prepare RAG system for a project - complete pipeline
@@ -75,12 +63,16 @@ export class RagPrepareController {
       );
 
       // Publish chunking completion event
-      await this.safePublishToKafka('documents-chunked', {
+      await this.kafkaProducerService.publishDocumentsChunked({
         projectId,
+        timestamp: new Date().toISOString(),
         processedTexts: chunkingResult.processedTexts,
         totalChunks: chunkingResult.totalChunks,
-        chunkingStrategy: chunkingResult.chunkingStrategy,
-        timestamp: new Date().toISOString(),
+        chunkingStrategy: chunkingResult.chunkingStrategy as 'semantic' | 'fixed' | 'hybrid',
+        correlationId: uuidv4(),
+        metadata: {
+          processingTime: Date.now()
+        }
       });
 
       if (!chunkingResult.totalChunks || chunkingResult.totalChunks === 0) {
@@ -103,12 +95,17 @@ export class RagPrepareController {
         console.error(`❌ ${errorMessage}`);
         
         // Publish failure event
-        await this.safePublishToKafka('embeddings-ingested', {
+        await this.kafkaProducerService.publishEmbeddingsIngested({
           projectId,
+          timestamp: new Date().toISOString(),
           vectorCount: 0,
           success: false,
           error: errorMessage,
-          timestamp: new Date().toISOString(),
+          correlationId: uuidv4(),
+          metadata: {
+            processingTime: Date.now(),
+            deletedVectors: deleteResult.deleted
+          }
         });
         
         throw new HttpException(
@@ -137,13 +134,18 @@ export class RagPrepareController {
       );
 
       // Publish embedding generation completion event
-      await this.safePublishToKafka('chunks-embedded', {
+      await this.kafkaProducerService.publishChunksEmbedded({
         projectId,
+        timestamp: new Date().toISOString(),
         processedChunks: chunks.length,
         totalEmbeddings: embeddings.length,
         modelUsed: modelName,
         dimensions: embeddings[0]?.length || 512,
-        timestamp: new Date().toISOString(),
+        correlationId: uuidv4(),
+        metadata: {
+          processingTime: Date.now(),
+          tokenCount: chunks.reduce((sum, chunk) => sum + chunk.content.length, 0)
+        }
       });
 
       // Step 4: Prepare vectors and store in Pinecone
@@ -175,12 +177,18 @@ export class RagPrepareController {
       console.log(`✨ Successfully deleted ${deletedChunksCount} chunks from Firebase`);
 
       // Publish final success event
-      await this.safePublishToKafka('embeddings-ingested', {
+      await this.kafkaProducerService.publishEmbeddingsIngested({
         projectId,
+        timestamp: new Date().toISOString(),
         vectorCount: pineconeResult.totalUpserted,
         success: true,
         chunksDeleted: deletedChunksCount,
-        timestamp: new Date().toISOString(),
+        correlationId: uuidv4(),
+        metadata: {
+          processingTime: Date.now(),
+          pineconeIndex: 'ragify-vectors',
+          deletedVectors: deleteResult.deleted
+        }
       });
 
       console.log(`✅ RAG preparation completed successfully for project: ${projectId}`);
@@ -206,12 +214,16 @@ export class RagPrepareController {
       console.error('❌ RAG preparation failed:', error);
       
       // Publish failure event safely
-      await this.safePublishToKafka('embeddings-ingested', {
+      await this.kafkaProducerService.publishEmbeddingsIngested({
         projectId,
+        timestamp: new Date().toISOString(),
         vectorCount: 0,
         success: false,
         error: error.message,
-        timestamp: new Date().toISOString(),
+        correlationId: uuidv4(),
+        metadata: {
+          processingTime: Date.now()
+        }
       });
 
       if (error instanceof HttpException) {
