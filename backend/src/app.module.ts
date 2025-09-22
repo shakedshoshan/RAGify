@@ -1,6 +1,5 @@
-import { Module, OnModuleInit } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { KafkaModule, KafkaService } from '@toxicoder/nestjs-kafka';
+import { Module, OnModuleInit, Global } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TextController } from './controllers/text.controller';
@@ -9,6 +8,7 @@ import { ChunkingController } from './controllers/chunking.controller';
 import { EmbeddingController } from './controllers/embedding.controller';
 import { GenerationController } from './controllers/generation.controller';
 import { RagPrepareController } from './controllers/rag-prepare.controller';
+import { KafkaHealthController } from './controllers/kafka-health.controller';
 import { FirestoreService } from './services/firestore.service';
 import { ProjectService } from './services/project.service';
 import { CsvService } from './services/csv.service';
@@ -20,51 +20,40 @@ import { GenerationService } from './services/generation.service';
 import { RetrievalService } from './services/retrieval.service';
 import firebaseConfig from './config/firebase.config';
 import pineconeConfig from './config/pinecone.config';
+import { KafkaModule } from './kafka/kafka.module';
+import { RagConsumersModule } from './kafka/consumers/rag-consumers.module';
+import { KafkaHealthService } from './kafka/kafka-health.service';
 
+@Global()
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [firebaseConfig, pineconeConfig],
     }),
-    KafkaModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      global: true,
-      useFactory: (configService: ConfigService) => ({
-        brokers: [configService.get<string>('KAFKA_BROKERS') || 'localhost:9092'],
-        clientId: configService.get<string>('KAFKA_CLIENT_ID') || 'ragify-backend',
-        topicAutoCreate: true,
-        retry: {
-          retries: 3,
-          initialRetryTime: 300,
-          maxRetryTime: 30000,
-        },
-      }),
-    }),
+    KafkaModule,
+    RagConsumersModule,
   ],
-  controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, GenerationController, RagPrepareController],
+  controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, GenerationController, RagPrepareController, KafkaHealthController],
   providers: [AppService, FirestoreService, ProjectService, CsvService, PdfService, ChunkingService, EmbeddingService, PineconeService, GenerationService, RetrievalService],
+  exports: [ChunkingService, EmbeddingService, PineconeService, FirestoreService, ProjectService, CsvService, PdfService, GenerationService, RetrievalService],
 })
 export class AppModule implements OnModuleInit {
-  constructor(private readonly kafkaService: KafkaService) {}
+  constructor(private readonly kafkaHealthService: KafkaHealthService) {}
 
   async onModuleInit() {
     try {
-      // Initialize Kafka connection
-      await this.kafkaService.connect();
+      // Initialize Kafka health monitoring
+      await this.kafkaHealthService.initializeHealthMonitoring();
       
-      // Ensure topics exist
-      await this.kafkaService.ensureTopics([
-        'documents-chunked',
-        'chunks-embedded', 
-        'embeddings-ingested',
-        'queries-received',
-        'contexts-retrieved',
-        'responses-generated'
-      ]);
+      // Perform initial health check
+      const healthStatus = await this.kafkaHealthService.checkHealth();
       
-      console.log('✅ Kafka service initialized successfully');
+      if (healthStatus.isHealthy) {
+        console.log('✅ Kafka service initialized successfully');
+      } else {
+        console.warn('⚠️ Kafka service initialized with issues:', healthStatus.status);
+      }
     } catch (error) {
       console.error('❌ Failed to initialize Kafka service:', error.message);
       // Don't throw error - app can still work without Kafka

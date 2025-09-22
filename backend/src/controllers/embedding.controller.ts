@@ -7,7 +7,6 @@ import {
   HttpException, 
   HttpStatus
 } from '@nestjs/common';
-import { KafkaService } from '@toxicoder/nestjs-kafka';
 import { EmbeddingService } from '../services/embedding.service';
 import { 
   EmbeddingRequestDto, 
@@ -15,6 +14,8 @@ import {
   EmbeddingDto
 } from '../dto/embedding.dto';
 import { PineconeService } from '../services/pinecone.service';
+import { KafkaProducerService } from '../kafka/producers/kafka-producer.service';
+import { ChunksEmbeddedEventDto } from '../kafka/dto/kafka-event.dto';
 import { v4 as uuidv4 } from 'uuid';
 
 @Controller('embedding')
@@ -22,7 +23,7 @@ export class EmbeddingController {
   constructor(
     private readonly embeddingService: EmbeddingService,
     private readonly pineconeService: PineconeService,
-    private readonly kafkaService: KafkaService,
+    private readonly kafkaProducerService: KafkaProducerService,
   ) {}
 
   /**
@@ -117,19 +118,18 @@ export class EmbeddingController {
       };
 
       // Publish to chunks-embedded topic
-      await this.kafkaService.send({
-        topic: 'chunks-embedded',
-        messages: {
-          key: projectId,
-          value: {
-            projectId,
-            processedChunks: chunks.length,
-            totalEmbeddings: pineconeResult.totalUpserted,
-            modelUsed: modelName,
-            dimensions: embeddings[0]?.length || 512,
-            timestamp: new Date().toISOString(),
-          },
-        },
+      await this.kafkaProducerService.publishChunksEmbedded({
+        projectId,
+        timestamp: new Date().toISOString(),
+        processedChunks: chunks.length,
+        totalEmbeddings: pineconeResult.totalUpserted,
+        modelUsed: modelName,
+        dimensions: embeddings[0]?.length || 512,
+        correlationId: uuidv4(),
+        metadata: {
+          processingTime: Date.now(),
+          tokenCount: chunks.reduce((sum, chunk) => sum + chunk.content.length, 0)
+        }
       });
       
       return {

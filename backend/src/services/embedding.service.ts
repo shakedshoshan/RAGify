@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { KafkaService } from '@toxicoder/nestjs-kafka';
 import OpenAI from 'openai';
 import { FirestoreService } from './firestore.service';
+import { KafkaProducerService } from '../kafka/producers/kafka-producer.service';
 
 @Injectable()
 export class EmbeddingService {
@@ -13,7 +13,7 @@ export class EmbeddingService {
   constructor(
     private readonly firestoreService: FirestoreService,
     private readonly configService: ConfigService,
-    private readonly kafkaService: KafkaService,
+    private readonly kafkaProducerService: KafkaProducerService,
   ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!apiKey) {
@@ -97,21 +97,32 @@ export class EmbeddingService {
   }
 
   /**
+   * Get embeddings by project ID from Firestore
+   */
+  async getEmbeddingsByProjectId(projectId: string): Promise<number[][]> {
+    const embeddings = await this.firestoreService.getEmbeddingsByProjectId(projectId);
+    
+    if (!embeddings || embeddings.length === 0) {
+      throw new NotFoundException(`No embeddings found for project ${projectId}`);
+    }
+    
+    return embeddings;
+  }
+
+  /**
    * Publish embeddings ingested event to Kafka
    */
   async publishEmbeddingsIngested(projectId: string, vectorCount: number, success: boolean): Promise<void> {
     try {
-      await this.kafkaService.send({
-        topic: 'embeddings-ingested',
-        messages: {
-          key: projectId,
-          value: {
-            projectId,
-            vectorCount,
-            success,
-            timestamp: new Date().toISOString(),
-          },
-        },
+      await this.kafkaProducerService.publishEmbeddingsIngested({
+        projectId,
+        timestamp: new Date().toISOString(),
+        vectorCount,
+        success,
+        correlationId: Math.random().toString(36).substring(7),
+        metadata: {
+          processingTime: Date.now()
+        }
       });
     } catch (error) {
       console.error('Failed to publish embeddings-ingested event:', error);

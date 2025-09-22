@@ -1,51 +1,36 @@
 import { 
   Controller, 
   Post, 
+  Get,
   Param, 
   Body,
   HttpException, 
-  HttpStatus
+  HttpStatus,
+  Logger
 } from '@nestjs/common';
-import { KafkaService } from '@toxicoder/nestjs-kafka';
 import { ChunkingService } from '../services/chunking.service';
-import { EmbeddingService } from '../services/embedding.service';
-import { PineconeService } from '../services/pinecone.service';
+import { KafkaProducerService } from '../kafka/producers/kafka-producer.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Controller('rag')
 export class RagPrepareController {
+  private readonly logger = new Logger(RagPrepareController.name);
+
   constructor(
     private readonly chunkingService: ChunkingService,
-    private readonly embeddingService: EmbeddingService,
-    private readonly pineconeService: PineconeService,
-    private readonly kafkaService: KafkaService,
+    private readonly kafkaProducerService: KafkaProducerService,
   ) {}
 
-  /**
-   * Safely publish message to Kafka topic
-   */
-  private async safePublishToKafka(topic: string, message: any): Promise<void> {
-    try {
-      await this.kafkaService.send({
-        topic,
-        messages: {
-          key: message.projectId || 'default',
-          value: message,
-        },
-      });
-      console.log(`✅ Successfully published to ${topic}:`, message);
-    } catch (error) {
-      console.error(`❌ Failed to publish to ${topic}:`, error.message);
-      // Don't throw error - continue with the main flow
-    }
-  }
 
   /**
-   * Prepare RAG system for a project - complete pipeline
-   * This endpoint triggers the entire flow:
-   * 1. Chunk documents
-   * 2. Generate embeddings
-   * 3. Store in Pinecone
+   * Prepare RAG system for a project - Kafka-based pipeline
+   * This endpoint initiates the RAG preparation flow by:
+   * 1. Publishing a DOCUMENTS_CHUNKED event
+   * 
+   * The flow is handled by Kafka consumers:
+   * - ChunkingConsumer listens for DOCUMENTS_CHUNKED events and chunks documents + generates embeddings
+   * - EmbeddingConsumer listens for CHUNKS_EMBEDDED events and stores vectors in Pinecone
+   * - IngestionConsumer listens for EMBEDDINGS_INGESTED events and cleans up temporary chunks
    */
   @Post('prepare/:projectId')
   async prepareRag(
@@ -65,153 +50,55 @@ export class RagPrepareController {
         modelName = 'text-embedding-3-small'
       } = params || {};
 
-      // Step 1: Chunk documents
-      console.log(`🚀 Starting RAG preparation for project: ${projectId}`);
-      
-      const chunkingResult = await this.chunkingService.chunkProjectTexts(
-        projectId,
-        { chunkSize, chunkOverlap, chunkingStrategy },
-        true // delete existing chunks
-      );
+      const correlationId = uuidv4();
 
-      // Publish chunking completion event
-      await this.safePublishToKafka('documents-chunked', {
+      this.logger.log(`🚀 Starting RAG preparation for project: ${projectId}`);
+      
+      // Publish chunking initiation event to trigger the entire flow
+      await this.kafkaProducerService.publishDocumentsChunked({
         projectId,
-        processedTexts: chunkingResult.processedTexts,
-        totalChunks: chunkingResult.totalChunks,
-        chunkingStrategy: chunkingResult.chunkingStrategy,
         timestamp: new Date().toISOString(),
-      });
-
-      if (!chunkingResult.totalChunks || chunkingResult.totalChunks === 0) {
-        throw new HttpException(
-          {
-            success: false,
-            message: 'No chunks were created. Please check if documents exist for this project.',
-          },
-          HttpStatus.BAD_REQUEST
-        );
-      }
-
-      // Step 2: Delete existing vectors from Pinecone
-      console.log(`🗑️ Deleting existing vectors for project ${projectId}...`);
-      const deleteResult = await this.pineconeService.deleteVectorsByProjectId(projectId);
-      
-      // Check if deletion was successful
-      if (!deleteResult.success && deleteResult.deleted > 0) {
-        const errorMessage = `Vector deletion partially failed. Only ${deleteResult.deleted} vectors were deleted. Cannot proceed with RAG preparation to avoid data inconsistency.`;
-        console.error(`❌ ${errorMessage}`);
-        
-        // Publish failure event
-        await this.safePublishToKafka('embeddings-ingested', {
-          projectId,
-          vectorCount: 0,
-          success: false,
-          error: errorMessage,
-          timestamp: new Date().toISOString(),
-        });
-        
-        throw new HttpException(
-          {
-            success: false,
-            message: errorMessage,
-            details: {
-              deletionAttempted: true,
-              partiallyDeleted: deleteResult.deleted,
-              deletionSuccess: deleteResult.success
-            }
-          },
-          HttpStatus.INTERNAL_SERVER_ERROR
-        );
-      }
-      
-      console.log(`✨ Successfully handled vector deletion: ${deleteResult.deleted === 0 ? 'No existing vectors found' : `Deleted ${deleteResult.deleted} existing vectors`}`);
-
-      // Step 3: Get chunks and generate embeddings
-      console.log(`📊 Generating embeddings for ${chunkingResult.totalChunks} chunks...`);
-      const chunks = await this.embeddingService.getChunksByProjectId(projectId);
-      
-      const embeddings = await this.embeddingService.generateEmbeddings(
-        chunks.map(chunk => chunk.content),
-        modelName
-      );
-
-      // Publish embedding generation completion event
-      await this.safePublishToKafka('chunks-embedded', {
-        projectId,
-        processedChunks: chunks.length,
-        totalEmbeddings: embeddings.length,
-        modelUsed: modelName,
-        dimensions: embeddings[0]?.length || 512,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Step 4: Prepare vectors and store in Pinecone
-      console.log(`🗄️ Storing ${embeddings.length} vectors in Pinecone...`);
-      const vectors = chunks.map((chunk, index) => ({
-        id: chunk.id || uuidv4(),
-        values: embeddings[index],
+        processedTexts: 0, // Will be updated by ChunkingConsumer
+        totalChunks: 0, // Will be updated by ChunkingConsumer
+        chunkingStrategy: chunkingStrategy as 'semantic' | 'fixed' | 'hybrid',
+        correlationId,
         metadata: {
-          content: chunk.content,
-          source: chunk.sourceName || chunk.sourceId || projectId,
-          projectId, // Store projectId directly in metadata
-          chunkId: chunk.id,
-          chunkIndex: chunk.chunkIndex,
-          startIndex: chunk.startIndex,
-          endIndex: chunk.endIndex,
+          processingTime: Date.now(),
+          chunkSize,
+          chunkOverlap,
+          modelName
         }
-      }));
-
-      // Store vectors in Pinecone
-      const pineconeResult = await this.pineconeService.batchUpsertVectors(
-        projectId,
-        vectors,
-        100
-      );
-
-      // Step 5: Delete chunks from Firebase after successful Pinecone storage
-      console.log(`🗑️ Deleting chunks from Firebase for project ${projectId}...`);
-      const deletedChunksCount = await this.chunkingService.deleteExistingChunks(projectId);
-      console.log(`✨ Successfully deleted ${deletedChunksCount} chunks from Firebase`);
-
-      // Publish final success event
-      await this.safePublishToKafka('embeddings-ingested', {
-        projectId,
-        vectorCount: pineconeResult.totalUpserted,
-        success: true,
-        chunksDeleted: deletedChunksCount,
-        timestamp: new Date().toISOString(),
       });
 
-      console.log(`✅ RAG preparation completed successfully for project: ${projectId}`);
+      this.logger.log(`✅ RAG preparation initiated for project: ${projectId}`);
 
       return {
         success: true,
-        message: `RAG system prepared successfully. ${deleteResult.deleted > 0 ? `Deleted ${deleteResult.deleted} existing vectors. ` : 'No existing vectors found. '}Added ${pineconeResult.totalUpserted} new vectors. Deleted ${deletedChunksCount} chunks from Firebase.`,
+        message: `RAG preparation initiated successfully. The system will process documents in the background.`,
         data: {
           projectId,
-          processedTexts: chunkingResult.processedTexts,
-          totalChunks: chunkingResult.totalChunks,
-          chunkingStrategy: chunkingResult.chunkingStrategy,
-          embeddingsGenerated: embeddings.length,
-          vectorsStored: pineconeResult.totalUpserted,
-          deletedVectors: deleteResult.deleted,
-          deletedChunks: deletedChunksCount,
-          deletionSuccess: deleteResult.success,
-          modelUsed: modelName,
-          dimensions: embeddings[0]?.length || 512,
+          correlationId,
+          status: 'processing',
+          chunkingStrategy,
+          chunkSize,
+          chunkOverlap,
+          modelName
         },
       };
     } catch (error) {
-      console.error('❌ RAG preparation failed:', error);
+      this.logger.error('❌ RAG preparation initiation failed:', error);
       
       // Publish failure event safely
-      await this.safePublishToKafka('embeddings-ingested', {
+      const correlationId = uuidv4();
+      await this.kafkaProducerService.publishProcessingError({
         projectId,
-        vectorCount: 0,
-        success: false,
-        error: error.message,
         timestamp: new Date().toISOString(),
+        errorType: 'RAG_PREPARATION_INIT_ERROR',
+        errorMessage: error.message,
+        service: 'RagPrepareController',
+        operation: 'prepareRag',
+        correlationId,
+        errorDetails: { error: error.stack }
       });
 
       if (error instanceof HttpException) {
@@ -221,7 +108,52 @@ export class RagPrepareController {
       throw new HttpException(
         {
           success: false,
-          message: 'Failed to prepare RAG system',
+          message: 'Failed to initiate RAG preparation',
+          error: error.message,
+          correlationId
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Get RAG preparation status
+   * This endpoint checks the status of RAG preparation for a project
+   */
+  @Get('status/:projectId/:correlationId')
+  async getRagStatus(
+    @Param('projectId') projectId: string,
+    @Param('correlationId') correlationId: string
+  ) {
+    try {
+      // In a real implementation, you would check the status of the RAG preparation
+      // by querying a database or cache for events with this correlationId
+      
+      // For now, we'll just return a placeholder response
+      return {
+        success: true,
+        message: 'RAG preparation status retrieved successfully',
+        data: {
+          projectId,
+          correlationId,
+          // This would be determined by checking which events have been processed
+          currentStep: 'processing', // One of: processing, completed, failed
+          progress: {
+            chunking: true,
+            embedding: false,
+            vectorStorage: false,
+            cleanup: false
+          }
+        }
+      };
+    } catch (error) {
+      this.logger.error('❌ Failed to get RAG preparation status:', error);
+      
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Failed to get RAG preparation status',
           error: error.message,
         },
         HttpStatus.INTERNAL_SERVER_ERROR
