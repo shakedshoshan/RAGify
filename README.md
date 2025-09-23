@@ -40,7 +40,7 @@ The platform provides example code in multiple languages (Python, JavaScript, et
 - **Framework**: Built with React, Next.js, or Vue.js to provide a modern and responsive user interface.
 
 ### Databases
-- **Standard Database**: PostgreSQL or MongoDB for managing user accounts, project metadata, and API keys.
+- **Standard Database**: FireStore for managing user accounts, project metadata, and API keys.
 - **Vector Database**: Pinecone, Weaviate, or ChromaDB for efficient storage and retrieval of vector embeddings.
 
 ### Cloud Infrastructure
