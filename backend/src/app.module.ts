@@ -9,6 +9,7 @@ import { EmbeddingController } from './controllers/embedding.controller';
 import { GenerationController } from './controllers/generation.controller';
 import { RagPrepareController } from './controllers/rag-prepare.controller';
 import { KafkaHealthController } from './controllers/kafka-health.controller';
+import { ApiKeyController } from './controllers/apikey.controller';
 import { FirestoreService } from './services/firestore.service';
 import { ProjectService } from './services/project.service';
 import { CsvService } from './services/csv.service';
@@ -18,6 +19,7 @@ import { EmbeddingService } from './services/embedding.service';
 import { PineconeService } from './services/pinecone.service';
 import { GenerationService } from './services/generation.service';
 import { RetrievalService } from './services/retrieval.service';
+import { ApiKeyService } from './services/apikey.service';
 import firebaseConfig from './config/firebase.config';
 import pineconeConfig from './config/pinecone.config';
 import { KafkaModule } from './kafka/kafka.module';
@@ -34,9 +36,9 @@ import { KafkaHealthService } from './kafka/kafka-health.service';
     KafkaModule,
     RagConsumersModule,
   ],
-  controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, GenerationController, RagPrepareController, KafkaHealthController],
-  providers: [AppService, FirestoreService, ProjectService, CsvService, PdfService, ChunkingService, EmbeddingService, PineconeService, GenerationService, RetrievalService],
-  exports: [ChunkingService, EmbeddingService, PineconeService, FirestoreService, ProjectService, CsvService, PdfService, GenerationService, RetrievalService],
+  controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, GenerationController, RagPrepareController, KafkaHealthController, ApiKeyController],
+  providers: [AppService, FirestoreService, ProjectService, CsvService, PdfService, ChunkingService, EmbeddingService, PineconeService, GenerationService, RetrievalService, ApiKeyService],
+  exports: [ChunkingService, EmbeddingService, PineconeService, FirestoreService, ProjectService, CsvService, PdfService, GenerationService, RetrievalService, ApiKeyService],
 })
 export class AppModule implements OnModuleInit {
   constructor(private readonly kafkaHealthService: KafkaHealthService) {}
