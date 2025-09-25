@@ -52,32 +52,32 @@ export const UserProfile: React.FC = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+    <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
       <div className="text-center mb-6">
-        <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
           {currentUser.photoURL ? (
             <img
               src={currentUser.photoURL}
               alt="Profile"
-              className="w-20 h-20 rounded-full object-cover"
+              className="w-24 h-24 rounded-full object-cover"
             />
           ) : (
-            <span className="text-2xl font-semibold text-blue-600">
+            <span className="text-3xl font-semibold text-blue-600">
               {(currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase()}
             </span>
           )}
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">User Profile</h2>
+        <h2 className="text-3xl font-bold text-gray-900">User Profile</h2>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+        <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg">
           {success}
         </div>
       )}

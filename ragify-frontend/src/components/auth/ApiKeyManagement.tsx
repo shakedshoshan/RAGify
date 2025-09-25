@@ -70,8 +70,8 @@ export const ApiKeyManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Create New API Key</h2>
+      <div className="bg-white shadow-lg rounded-lg p-6">
+        <h2 className="text-2xl font-semibold mb-4">Create New API Key</h2>
         <form onSubmit={handleCreateKey} className="space-y-4">
           <div>
             <label htmlFor="keyName" className="block text-sm font-medium text-gray-700">
@@ -109,8 +109,8 @@ export const ApiKeyManagement: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Your API Keys</h2>
+      <div className="bg-white shadow-lg rounded-lg p-6">
+        <h2 className="text-2xl font-semibold mb-4">Your API Keys</h2>
         {loading ? (
           <div className="text-center py-4">Loading...</div>
         ) : apiKeys.length === 0 ? (
