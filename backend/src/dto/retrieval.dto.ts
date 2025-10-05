@@ -1,4 +1,21 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsArray, ValidateNested, IsEnum } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export enum MessageRole {
+  USER = 'user',
+  ASSISTANT = 'assistant',
+  SYSTEM = 'system'
+}
+
+export class ConversationMessage {
+  @IsEnum(MessageRole)
+  @IsNotEmpty()
+  role: MessageRole;
+
+  @IsString()
+  @IsNotEmpty()
+  content: string;
+}
 
 export class RetrievalRequestDto {
   @IsString()
@@ -12,6 +29,12 @@ export class RetrievalRequestDto {
   @IsOptional()
   @IsNumber()
   topK?: number; // Optional: number of results to return, default: 5
+  
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ConversationMessage)
+  conversationHistory?: ConversationMessage[];
 }
 
 export class RetrievalResponseDto {

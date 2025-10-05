@@ -1,3 +1,5 @@
+import { ConversationMessage } from './retrieval.dto';
+
 export class GenerationRequestDto {
   query: string;
   context: string;
@@ -7,4 +9,5 @@ export class GenerationRequestDto {
 export class GenerationResponseDto {
   answer: string;
   query: string;
+  conversationHistory?: ConversationMessage[];
 }

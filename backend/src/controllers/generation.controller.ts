@@ -2,7 +2,7 @@ import { Controller, Post, Body, BadRequestException, UseGuards } from '@nestjs/
 import { GenerationService } from '../services/generation.service';
 import { GenerationResponseDto, GenerationRequestDto } from '../dto/generation.dto';
 import { RetrievalService } from '../services/retrieval.service';
-import { RetrievalRequestDto } from '../dto/retrieval.dto';
+import { RetrievalRequestDto, MessageRole } from '../dto/retrieval.dto';
 import { KafkaProducerService } from '../kafka/producers/kafka-producer.service';
 import {
   QueryReceivedEventDto,
@@ -41,6 +41,12 @@ export class GenerationController {
 
       // Step 2: Use retrieval service to get context
       const retrievedData = await this.retrievalService.queryDocuments(requestDto);
+      
+      // Add conversation history to context if available
+      const contextWithHistory = {
+        ...retrievedData,
+        conversationHistory: requestDto.conversationHistory || []
+      };
 
       // Step 3: Publish retrieved context
       await this.kafkaProducerService.publishContextRetrieved({
@@ -51,14 +57,16 @@ export class GenerationController {
         correlationId,
         metadata: {
           retrievedChunks: (retrievedData as any).chunks?.length || 0,
-          retrievalTime: Date.now() - startTime
+          retrievalTime: Date.now() - startTime,
+          hasConversationHistory: Boolean(requestDto.conversationHistory && requestDto.conversationHistory.length > 0),
+          conversationTurns: requestDto.conversationHistory ? requestDto.conversationHistory.length : 0
         }
       });
 
-      // Step 4: Generate response using the retrieved context
+      // Step 4: Generate response using the retrieved context and conversation history
       const generationStartTime = Date.now();
       const answer = await this.generationService.generateResponse(
-        retrievedData,
+        contextWithHistory,
         retrievedData.query
       );
 
@@ -71,13 +79,23 @@ export class GenerationController {
         correlationId,
         metadata: {
           generationTime: Date.now() - generationStartTime,
-          modelUsed: 'gpt-4' // This should come from config
+          modelUsed: 'gpt-3.5-turbo', // This should come from config
+          hasConversationHistory: Boolean(requestDto.conversationHistory && requestDto.conversationHistory.length > 0),
+          conversationTurns: requestDto.conversationHistory ? requestDto.conversationHistory.length : 0
         }
       });
 
+      // Create updated conversation history with the new response
+      const updatedHistory = [
+        ...(requestDto.conversationHistory || []),
+        { role: MessageRole.USER, content: requestDto.prompt },
+        { role: MessageRole.ASSISTANT, content: answer }
+      ];
+      
       return {
         answer,
-        query: retrievedData.query
+        query: retrievedData.query,
+        conversationHistory: updatedHistory
       };
     } catch (error) {
       console.error('Generation error:', error);

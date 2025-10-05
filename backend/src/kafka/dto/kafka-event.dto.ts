@@ -136,6 +136,8 @@ export class ContextRetrievedEventDto extends BaseKafkaEventDto {
     retrievedChunks?: number;
     similarityScores?: number[];
     retrievalTime?: number;
+    hasConversationHistory?: boolean;
+    conversationTurns?: number;
   };
 }
 
@@ -156,6 +158,8 @@ export class ResponseGeneratedEventDto extends BaseKafkaEventDto {
     modelUsed?: string;
     tokenCount?: number;
     contextLength?: number;
+    hasConversationHistory?: boolean;
+    conversationTurns?: number;
   };
 }
 
