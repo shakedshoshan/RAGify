@@ -8,6 +8,7 @@ import {
   ProjectsPage,
   ProjectDetailsPage,
   TextPage, 
+  ChatbotTestingPage,
   LoginPage, 
   RegisterPage, 
   ProfilePage 
@@ -52,6 +53,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/chatbot-testing" 
+              element={
+                <ProtectedRoute>
+                  <ChatbotTestingPage />
                 </ProtectedRoute>
               } 
             />

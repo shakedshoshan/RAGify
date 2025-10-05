@@ -28,13 +28,30 @@ export class GenerationService {
       return retrievedData.context;
     }
     
-    const context = retrievedData.results
-      .map((result: any, index: number) => 
-        `[${index + 1}] ${result.content}`
-      )
-      .join('\n\n');
+    // Handle case where results array exists
+    if (retrievedData.results && Array.isArray(retrievedData.results)) {
+      const context = retrievedData.results
+        .map((result: any, index: number) => 
+          `[${index + 1}] ${result.content}`
+        )
+        .join('\n\n');
+      
+      return context;
+    }
     
-    return context;
+    // Handle case where chunks array exists (alternative format)
+    if (retrievedData.chunks && Array.isArray(retrievedData.chunks)) {
+      const context = retrievedData.chunks
+        .map((chunk: any, index: number) => 
+          `[${index + 1}] ${chunk.content || chunk.text || chunk}`
+        )
+        .join('\n\n');
+      
+      return context;
+    }
+    
+    // Fallback: return empty context if no data is found
+    return '';
   }
 
   /**
@@ -58,16 +75,18 @@ export class GenerationService {
       });
       
       // Add conversation history if available
-      if (retrievedData.conversationHistory && retrievedData.conversationHistory.length > 0) {
+      if (retrievedData.conversationHistory && Array.isArray(retrievedData.conversationHistory) && retrievedData.conversationHistory.length > 0) {
         // Add previous conversation turns (limit to last 10 for context window management)
         const recentHistory = retrievedData.conversationHistory.slice(-10);
         
-        // Map to OpenAI message format
+        // Map to OpenAI message format with validation
         recentHistory.forEach(message => {
-          messages.push({
-            role: message.role.toLowerCase(),
-            content: message.content
-          });
+          if (message && message.role && message.content) {
+            messages.push({
+              role: message.role.toLowerCase(),
+              content: message.content
+            });
+          }
         });
       }
       
@@ -92,6 +111,7 @@ My question is: ${originalQuery}`
       // Check if the answer indicates insufficient context
       if (answer.includes("I don't have enough information to answer that question based on the provided context") && 
           retrievedData.conversationHistory && 
+          Array.isArray(retrievedData.conversationHistory) &&
           retrievedData.conversationHistory.length > 0) {
         
         // Fall back to conversation history only
@@ -102,13 +122,15 @@ My question is: ${originalQuery}`
           }
         ];
         
-        // Add conversation history
+        // Add conversation history with validation
         const recentHistory = retrievedData.conversationHistory.slice(-10);
         recentHistory.forEach(message => {
-          conversationOnlyMessages.push({
-            role: message.role.toLowerCase(),
-            content: message.content
-          });
+          if (message && message.role && message.content) {
+            conversationOnlyMessages.push({
+              role: message.role.toLowerCase(),
+              content: message.content
+            });
+          }
         });
         
         // Add current query

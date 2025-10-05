@@ -11,6 +11,7 @@ const Navigation: React.FC = () => {
     { path: '/', label: 'Home', icon: '🏠' },
     { path: '/projects', label: 'Projects', icon: '📁' },
     { path: '/text', label: 'Create Text', icon: '📝' },
+    { path: '/chatbot-testing', label: 'Test Chatbot', icon: '🤖' },
   ];
 
   const handleLogout = async () => {
