@@ -1,4 +1,4 @@
-import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, BadRequestException, UseGuards } from '@nestjs/common';
 import { GenerationService } from '../services/generation.service';
 import { GenerationResponseDto, GenerationRequestDto } from '../dto/generation.dto';
 import { RetrievalService } from '../services/retrieval.service';
@@ -10,6 +10,7 @@ import {
   ResponseGeneratedEventDto
 } from '../kafka/dto/kafka-event.dto';
 import { v4 as uuidv4 } from 'uuid';
+import { ApiKeyGuard } from '../guards/api-key.guard';
 
 @Controller('generation')
 export class GenerationController {
@@ -20,6 +21,7 @@ export class GenerationController {
   ) {}
 
   @Post('generate')
+  @UseGuards(ApiKeyGuard)
   async generateAnswer(@Body() requestDto: RetrievalRequestDto): Promise<GenerationResponseDto> {
     const correlationId = uuidv4();
     const startTime = Date.now();

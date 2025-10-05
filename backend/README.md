@@ -149,11 +149,26 @@ The system follows a modular architecture with clear separation of concerns:
    }
    ```
 
-### Step 5: Query and Generation
+### Step 5: API Key Creation
+
+1. **Create an API Key**
+```bash
+   POST /apikey
+   {
+     "user_id": "user123",
+     "name": "My API Key",
+     "description": "For RAG queries"
+   }
+   ```
+
+### Step 6: Query and Generation
 
 1. **Query the RAG System**
 ```bash
    POST /generation/generate
+   Headers:
+     Authorization: Bearer rk_your_api_key
+   Body:
    {
      "prompt": "What is the main topic discussed in the documents?",
      "projectId": "project123",
@@ -235,7 +250,15 @@ graph TD
 - `POST /embedding/project/:projectId` - Generate embeddings for project
 
 ### Generation
-- `POST /generation/generate` - Generate RAG response
+- `POST /generation/generate` - Generate RAG response (API key required)
+
+### API Keys
+- `POST /apikey` - Create a new API key
+- `GET /apikey/user/:user_id` - Get all API keys for a user
+- `GET /apikey/:key_id` - Get API key details
+- `PUT /apikey/:key_id` - Update API key
+- `PUT /apikey/:key_id/revoke` - Revoke an API key
+- `DELETE /apikey/:key_id` - Delete an API key
 
 ## 🛠️ Key Features
 
@@ -266,7 +289,8 @@ graph TD
 ## 🔒 Security Considerations
 
 - **Input Validation**: Comprehensive request validation
-- **Authentication**: Firebase-based user authentication
+- **Authentication**: Firebase-based user authentication and API key authentication
+- **API Key Authorization**: Secure endpoints with API key validation
 - **Data Isolation**: Project-based data separation
 - **API Security**: CORS configuration and security headers
 - **Error Handling**: Secure error messages without data leakage
