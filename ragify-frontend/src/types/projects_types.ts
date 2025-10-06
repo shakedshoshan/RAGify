@@ -37,3 +37,24 @@ export interface ProjectListResponse {
     data?: Project[];
     error?: string;
   }
+
+  // Types for the edit text payload and response
+export interface EditTextPayload {
+  name?: string;
+  text?: string;
+}
+
+export interface EditTextResponse {
+  success: boolean;
+  id?: string;
+  message: string;
+  data?: {
+    id: string;
+    project_id: string;
+    name: string;
+    text: string;
+    createdAt?: any;
+    updatedAt?: any;
+  };
+  error?: string;
+}

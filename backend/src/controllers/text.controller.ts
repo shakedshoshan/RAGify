@@ -2,6 +2,7 @@ import {
   Body, 
   Controller, 
   Post, 
+  Put,
   Delete,
   Param,
   UploadedFile, 
@@ -12,7 +13,7 @@ import {
   Query
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { TextPayloadDto } from '../dto/text-payload.dto';
+import { TextPayloadDto, EditTextDto } from '../dto/text-payload.dto';
 import { FirestoreService } from '../services/firestore.service';
 import { CsvService } from '../services/csv.service';
 import { PdfService } from '../services/pdf.service';
@@ -45,6 +46,72 @@ export class TextController {
         message: 'Failed to create text',
         error: error.message,
       };
+    }
+  }
+
+  @Put(':id')
+  async editText(@Param('id') id: string, @Body() editTextDto: EditTextDto) {
+    try {
+      // Validate ID parameter
+      if (!id) {
+        throw new BadRequestException('ID parameter is required');
+      }
+
+      // Validate that at least one field is provided for update
+      if (!editTextDto.name && !editTextDto.text) {
+        throw new BadRequestException('At least one field (name or text) must be provided for update');
+      }
+
+      // Check if document exists before updating
+      const existingDoc = await this.firestoreService.getDocument('rawText', id);
+      if (!existingDoc) {
+        throw new HttpException(
+          {
+            success: false,
+            message: 'Text document not found',
+            error: `No document found with ID: ${id}`,
+          },
+          HttpStatus.NOT_FOUND
+        );
+      }
+
+      // Prepare update data (only include fields that are provided)
+      const updateData: any = {};
+      if (editTextDto.name !== undefined) {
+        updateData.name = editTextDto.name;
+      }
+      if (editTextDto.text !== undefined) {
+        updateData.text = editTextDto.text;
+      }
+
+      // Update the document
+      await this.firestoreService.updateDocument('rawText', id, updateData);
+
+      // Get the updated document to return
+      const updatedDoc = await this.firestoreService.getDocument('rawText', id);
+
+      return {
+        success: true,
+        id: id,
+        message: 'Text updated successfully',
+        data: {
+          id: id,
+          ...updatedDoc,
+        },
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Failed to update text',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
   

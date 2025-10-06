@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 
 export class TextPayloadDto {
   @IsString()
@@ -12,4 +12,14 @@ export class TextPayloadDto {
   @IsString()
   @IsNotEmpty()
   text: string;
+}
+
+export class EditTextDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  text?: string;
 }
