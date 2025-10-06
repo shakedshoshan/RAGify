@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useGetProject } from '../hooks/project_hooks/useGetProject';
 import { useDeleteText } from '../hooks/useDeleteText';
 import { EditTextButton } from '../components/EditTextButton';
+import { FullTextModal } from '../components/FullTextModal';
 import type { Project } from '../types/projects_types';
 
 const ProjectDetailsPage: React.FC = () => {
@@ -13,6 +14,7 @@ const ProjectDetailsPage: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<{ id: string; name: string; text: string } | null>(null);
 
   useEffect(() => {
     if (projectId) {
@@ -306,12 +308,20 @@ const ProjectDetailsPage: React.FC = () => {
                           <div className="mt-2 text-right">
                             <button 
                               className="text-sm text-blue-600 hover:text-blue-800"
-                              onClick={() => window.alert("Full text view will be implemented in a future update")}
+                              onClick={() => setSelectedDocument({ id: doc.id, name: doc.name, text: doc.text })}
                             >
                               View Full Text
                             </button>
                           </div>
                         )}
+
+                        {/* Full Text Modal */}
+                        <FullTextModal
+                          isOpen={selectedDocument?.id === doc.id}
+                          onClose={() => setSelectedDocument(null)}
+                          documentName={doc.name}
+                          content={doc.text}
+                        />
                       </div>
                       
                       {/* Delete Confirmation Dialog */}
