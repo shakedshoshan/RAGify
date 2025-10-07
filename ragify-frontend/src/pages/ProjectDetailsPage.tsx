@@ -4,6 +4,7 @@ import { useGetProject } from '../hooks/project_hooks/useGetProject';
 import { useDeleteText } from '../hooks/useDeleteText';
 import { EditTextButton } from '../components/EditTextButton';
 import { FullTextModal } from '../components/FullTextModal';
+import { PrepareRagButton } from '../components/PrepareRagButton';
 import type { Project } from '../types/projects_types';
 
 const ProjectDetailsPage: React.FC = () => {
@@ -170,9 +171,22 @@ const ProjectDetailsPage: React.FC = () => {
                 </svg>
                 Back to Projects
               </button>
-              <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
+              <div className="flex items-center space-x-9">
+                <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
+                
+              </div>
               <p className="mt-2 text-gray-600">Project Details</p>
             </div>
+            {project.rawTextDocuments && project.rawTextDocuments.length > 0 && (
+                  <PrepareRagButton
+                    projectId={project.id}
+                    onPrepareSuccess={(correlationId) => {
+                      console.log('RAG preparation started with correlationId:', correlationId);
+                      // You can add additional handling here, like showing a success message
+                      // or starting to poll for status updates
+                    }}
+                  />
+                )}
           </div>
         </div>
 
@@ -375,6 +389,7 @@ const ProjectDetailsPage: React.FC = () => {
                 >
                   Refresh Data
                 </button>
+                
               </div>
             </div>
           </div>
