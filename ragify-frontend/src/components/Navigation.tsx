@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useAppSelector } from '../store/hooks';
+import { selectCurrentUser, selectIsAuthenticated } from '../store/slices/userSlice';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
-  const { currentUser, logout } = useAuth();
+  const { logout } = useAuth();
+  const currentUser = useAppSelector(selectCurrentUser);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   
   const navItems = [
@@ -53,7 +57,7 @@ const Navigation: React.FC = () => {
 
           {/* Authentication Section */}
           <div className="flex items-center">
-            {currentUser ? (
+            {isAuthenticated && currentUser ? (
               <div className="relative">
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}

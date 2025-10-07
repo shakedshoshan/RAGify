@@ -16,6 +16,8 @@ import {
 } from 'firebase/auth';
 import type { User, UserCredential } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { useAppDispatch } from '../store/hooks';
+import { setUser, clearUser, setLoading, setError, updateUserProfile as updateUserProfileAction } from '../store/slices/userSlice';
 
 // Types
 interface AuthContextType {
@@ -56,7 +58,8 @@ interface AuthProviderProps {
 // Auth Provider Component
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoadingState] = useState(true);
+  const dispatch = useAppDispatch();
 
   // Register function
   const register = async (email: string, password: string, displayName?: string): Promise<UserCredential> => {
@@ -77,7 +80,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Logout function
   const logout = async (): Promise<void> => {
-    return await signOut(auth);
+    await signOut(auth);
+    // Clear Redux store
+    dispatch(clearUser());
   };
 
   // Reset password function
@@ -88,9 +93,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Update user profile
   const updateUserProfile = async (displayName: string): Promise<void> => {
     if (currentUser) {
-      return await updateProfile(currentUser, { displayName });
+      await updateProfile(currentUser, { displayName });
+      // Update Redux store with the new profile data
+      dispatch(updateUserProfileAction({ displayName }));
+    } else {
+      throw new Error('No user is currently signed in');
     }
-    throw new Error('No user is currently signed in');
   };
 
   // Google sign-in
@@ -153,9 +161,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Set up auth state observer and handle redirect results
   useEffect(() => {
+    dispatch(setLoading(true));
+    
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      setLoading(false);
+      setLoadingState(false);
+      
+      // Update Redux store with user data
+      dispatch(setUser(user));
     });
 
     // Handle redirect results on app initialization
@@ -165,21 +178,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (result) {
           // User successfully signed in via redirect
           console.log('Sign-in via redirect successful:', result.user);
+          dispatch(setUser(result.user));
         }
       } catch (error) {
         console.error('Error handling redirect result:', error);
+        dispatch(setError(error instanceof Error ? error.message : 'Authentication error'));
       }
     };
 
     handleInitialRedirect();
 
     return unsubscribe; // Cleanup subscription on unmount
-  }, []);
+  }, [dispatch]);
 
   // Context value
   const value: AuthContextType = {
     currentUser,
-    loading,
+    loading: loading,
     login,
     register,
     logout,
