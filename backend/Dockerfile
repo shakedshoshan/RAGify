@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install ALL dependencies (including dev dependencies for build)
-RUN npm ci && npm cache clean --force
+RUN npm install && npm cache clean --force
 
 # Copy source code
 COPY . .
@@ -21,4 +21,4 @@ RUN npm prune --production && npm cache clean --force
 EXPOSE 5000
 
 # Start the application
-CMD ["npm", "run", "start:prod"]
+CMD ["node", "dist/main.js"]

@@ -54,6 +54,35 @@ services:
     networks:
       - ragify-network
 
+  ragify-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ragify-backend
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - KAFKA_BROKER=kafka:9092
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+      - PINECONE_INDEX_HOST=${PINECONE_INDEX_HOST}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - KAFKA_CLIENT_ID=${KAFKA_CLIENT_ID}
+      - KAFKA_BROKERS=kafka:9092
+
+    networks:
+      - ragify-network
+    restart: unless-stopped
+
+
 networks:
   ragify-network:
     name: ragify-network
