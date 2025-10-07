@@ -51,6 +51,16 @@ export class ProjectResponseDto {
 
   @IsOptional()
   updatedAt?: any; // Firestore timestamp
+  
+  @IsOptional()
+  isEmbedded?: boolean = false;
+  
+  @IsOptional()
+  embeddedTime?: any; // Firestore timestamp
+  
+  @IsOptional()
+  @IsNumber()
+  numberOfDocs?: number;
 }
 
 export class ProjectWithRawTextDto extends ProjectResponseDto {

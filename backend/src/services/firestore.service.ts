@@ -250,4 +250,27 @@ export class FirestoreService {
   async deleteChunksByProjectId(projectId: string): Promise<number> {
     return this.deleteDocumentsByFilter('textChunks', { project_id: projectId });
   }
+
+  /**
+   * Update project embedding status
+   * @param projectId The project ID to update
+   * @param numberOfDocs The number of documents that were embedded
+   * @returns A promise that resolves when the update is complete
+   */
+  async updateProjectEmbeddingStatus(projectId: string, numberOfDocs: number): Promise<any> {
+    try {
+      const projectRef = this.getCollection('projects').doc(projectId);
+      await projectRef.update({
+        isEmbedded: true,
+        embeddedTime: admin.firestore.FieldValue.serverTimestamp(),
+        numberOfDocs: numberOfDocs,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      
+      return { success: true, projectId };
+    } catch (error) {
+      console.error(`Failed to update embedding status for project ${projectId}:`, error);
+      throw error;
+    }
+  }
 }

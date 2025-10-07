@@ -210,13 +210,6 @@ const ProjectDetailsPage: React.FC = () => {
                     </p>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">User ID</label>
-                    <p className="mt-1 text-sm text-gray-900 font-mono bg-gray-100 px-3 py-2 rounded break-all">
-                      {project.user_id}
-                    </p>
-                  </div>
-                  
                   {/* Documents Summary */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Associated Documents</label>
@@ -231,6 +224,37 @@ const ProjectDetailsPage: React.FC = () => {
                       </span>
                     </div>
                   </div>
+
+                  {/* Embedding Status */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Embedding Status</label>
+                    <div className="mt-1 flex items-center">
+                      <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full mr-2 ${
+                        project.isEmbedded 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {project.isEmbedded ? 'Embedded' : 'Not Embedded'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Number of Embedded Documents */}
+                  {project.isEmbedded && project.numberOfDocs !== undefined && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Embedded Documents</label>
+                      <div className="mt-1 flex items-center">
+                        <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full mr-2">
+                          {project.numberOfDocs}
+                        </span>
+                        <span className="text-sm text-gray-700">
+                          {project.numberOfDocs === 1 
+                            ? '1 document embedded' 
+                            : `${project.numberOfDocs} documents embedded`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -244,7 +268,6 @@ const ProjectDetailsPage: React.FC = () => {
                       {formatDate(project.createdAt)}
                     </p>
                     <p className="mt-1 text-xs text-gray-500 font-mono">
-                      Raw: {JSON.stringify(project.createdAt)}
                     </p>
                   </div>
                   
@@ -255,8 +278,17 @@ const ProjectDetailsPage: React.FC = () => {
                         {formatDate(project.updatedAt)}
                       </p>
                       <p className="mt-1 text-xs text-gray-500 font-mono">
-                        Raw: {JSON.stringify(project.updatedAt)}
                       </p>
+                    </div>
+                  )}
+
+                  {project.isEmbedded && project.embeddedTime && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Embedded At</label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {formatTimestamp(project.embeddedTime)}
+                      </p>
+                     
                     </div>
                   )}
                 </div>

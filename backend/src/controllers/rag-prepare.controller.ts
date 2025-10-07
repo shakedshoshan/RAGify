@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ChunkingService } from '../services/chunking.service';
 import { KafkaProducerService } from '../kafka/producers/kafka-producer.service';
+import { FirestoreService } from '../services/firestore.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Controller('rag')
@@ -19,6 +20,7 @@ export class RagPrepareController {
   constructor(
     private readonly chunkingService: ChunkingService,
     private readonly kafkaProducerService: KafkaProducerService,
+    private readonly firestoreService: FirestoreService,
   ) {}
 
 
@@ -158,6 +160,41 @@ export class RagPrepareController {
         },
         HttpStatus.INTERNAL_SERVER_ERROR
       );
+    }
+  }
+  
+  /**
+   * Update project embedding status after RAG preparation is complete
+   * This method should be called by the Kafka consumer after the RAG preparation is complete
+   * @param projectId The project ID to update
+   * @param numberOfDocs The number of documents that were embedded
+   */
+  async updateProjectAfterRagComplete(projectId: string, numberOfDocs: number) {
+    try {
+      this.logger.log(`Updating project ${projectId} after RAG preparation completed`);
+      
+      // Update the project in Firestore with embedding status
+      const result = await this.firestoreService.updateProjectEmbeddingStatus(projectId, numberOfDocs);
+      
+      this.logger.log(`✅ Project ${projectId} updated successfully with embedding status`);
+      
+      return result;
+    } catch (error) {
+      this.logger.error(`❌ Failed to update project ${projectId} after RAG preparation:`, error);
+      
+      // Publish failure event
+      await this.kafkaProducerService.publishProcessingError({
+        projectId,
+        timestamp: new Date().toISOString(),
+        errorType: 'PROJECT_UPDATE_ERROR',
+        errorMessage: error.message,
+        service: 'RagPrepareController',
+        operation: 'updateProjectAfterRagComplete',
+        correlationId: uuidv4(),
+        errorDetails: { error: error.stack }
+      });
+      
+      throw error;
     }
   }
 }

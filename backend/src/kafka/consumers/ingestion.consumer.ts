@@ -7,6 +7,7 @@ import { KafkaConsumerService } from './kafka-consumer.service';
 import { ChunkingService } from '../../services/chunking.service';
 import { KafkaProducerService } from '../producers/kafka-producer.service';
 import { KafkaErrorHandler } from '../error-handler/kafka-error.handler';
+import { RagPrepareController } from '../../controllers/rag-prepare.controller';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class IngestionConsumer implements OnModuleInit {
     private readonly chunkingService: ChunkingService,
     private readonly kafkaProducerService: KafkaProducerService,
     private readonly kafkaErrorHandler: KafkaErrorHandler,
+    private readonly ragPrepareController: RagPrepareController,
   ) {}
 
   async onModuleInit() {
@@ -90,6 +92,15 @@ export class IngestionConsumer implements OnModuleInit {
       }
       
       this.logger.log(`✨ Successfully deleted ${deletedChunksCount} chunks from Firebase`);
+      
+      // Update project embedding status
+      try {
+        await this.ragPrepareController.updateProjectAfterRagComplete(projectId, vectorCount);
+        this.logger.log(`✅ Updated project ${projectId} with embedding status`);
+      } catch (updateError) {
+        this.logger.error(`❌ Failed to update project embedding status: ${updateError.message}`);
+        // Continue with the process even if update fails
+      }
       
       // Log completion - no need to republish the event as it would create an infinite loop
       this.logger.log(`✅ Successfully completed RAG preparation for project ${projectId}`, {

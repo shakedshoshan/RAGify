@@ -21,6 +21,9 @@ export interface Project {
     createdAt?: any; // Firestore timestamp
     updatedAt?: any; // Firestore timestamp
     rawTextDocuments?: RawTextDocument[]; // Array of associated rawText documents
+    isEmbedded?: boolean; // Whether the project has been embedded
+    embeddedTime?: any; // Firestore timestamp when embedding was completed
+    numberOfDocs?: number; // Number of documents that were embedded
   }
   
 export interface ProjectResponse {
