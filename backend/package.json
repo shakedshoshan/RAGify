@@ -18,7 +18,10 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "cache:inspect": "ts-node src/scripts/cache-inspect.ts",
+    "cache:clear": "ts-node src/scripts/cache-clear.ts",
+    "cache:clear-projects": "ts-node src/scripts/cache-clear.ts --projects-only"
   },
   "dependencies": {
     "@google-cloud/firestore": "^7.11.3",
@@ -34,10 +37,12 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "csv-parser": "^3.2.0",
+    "dotenv": "^17.2.3",
     "firebase-admin": "^13.5.0",
     "multer": "^2.0.2",
     "openai": "^5.20.3",
     "pdf-parse": "^1.1.1",
+    "redis": "^5.8.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "uuid": "^9.0.1"

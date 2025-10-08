@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { FirestoreService } from './firestore.service';
+import { CacheService } from './cache.service';
 import { ProjectDto, ProjectWithRawTextDto } from '../dto/project.dto';
 
 @Injectable()
 export class ProjectService {
   private readonly collectionName = 'projects';
 
-  constructor(private readonly firestoreService: FirestoreService) {}
+  constructor(
+    private readonly firestoreService: FirestoreService,
+    private readonly cacheService: CacheService,
+  ) {}
 
   /**
    * Create a new project
@@ -44,7 +48,19 @@ export class ProjectService {
    * @returns The project data with associated rawText documents or null if not found
    */
   async getProjectById(id: string): Promise<ProjectWithRawTextDto | null> {
-    // Get the project document
+    // Generate cache key
+    const cacheKey = this.cacheService.generateProjectKey(id);
+    
+    // Try to get from cache first
+    const cachedProject = await this.cacheService.get<ProjectWithRawTextDto>(cacheKey);
+    if (cachedProject) {
+      console.log(`📦 Cache hit for project: ${id}`);
+      return cachedProject;
+    }
+    
+    console.log(`🔍 Cache miss for project: ${id}, fetching from database`);
+    
+    // Get the project document from database
     const project = await this.firestoreService.getDocument(this.collectionName, id);
     
     if (!project) {
@@ -95,6 +111,10 @@ export class ProjectService {
       rawTextDocuments
     };
     
+    // Cache the result for future requests (cache for 1 hour)
+    await this.cacheService.set(cacheKey, projectWithRawText, 3600);
+    console.log(`💾 Cached project: ${id}`);
+    
     return projectWithRawText;
   }
 
@@ -123,6 +143,14 @@ export class ProjectService {
    * @returns True if deletion was successful
    */
   async deleteProject(id: string) {
-    return this.firestoreService.deleteDocument(this.collectionName, id);
+    // Delete from database
+    const result = await this.firestoreService.deleteDocument(this.collectionName, id);
+    
+    // Invalidate cache
+    const cacheKey = this.cacheService.generateProjectKey(id);
+    await this.cacheService.delete(cacheKey);
+    console.log(`🗑️ Invalidated cache for deleted project: ${id}`);
+    
+    return result;
   }
 }

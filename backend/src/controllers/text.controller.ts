@@ -17,19 +17,28 @@ import { TextPayloadDto, EditTextDto } from '../dto/text-payload.dto';
 import { FirestoreService } from '../services/firestore.service';
 import { CsvService } from '../services/csv.service';
 import { PdfService } from '../services/pdf.service';
+import { CacheService } from '../services/cache.service';
 
 @Controller('text')
 export class TextController {
   constructor(
     private readonly firestoreService: FirestoreService,
     private readonly csvService: CsvService,
-    private readonly pdfService: PdfService
+    private readonly pdfService: PdfService,
+    private readonly cacheService: CacheService
   ) {}
 
   @Post()
   async createText(@Body() textPayloadDto: TextPayloadDto) {
     try {
       const docRef = await this.firestoreService.addDocument('rawText', textPayloadDto);
+      
+      // Invalidate project cache if a project_id is provided
+      if (textPayloadDto.project_id) {
+        const cacheKey = this.cacheService.generateProjectKey(textPayloadDto.project_id);
+        await this.cacheService.delete(cacheKey);
+        console.log(`🔄 Invalidated cache for project: ${textPayloadDto.project_id} after adding new text`);
+      }
       
       return {
         success: true,
@@ -74,6 +83,9 @@ export class TextController {
           HttpStatus.NOT_FOUND
         );
       }
+      
+      // Type assertion to help TypeScript understand the document structure
+      const typedExistingDoc = existingDoc as Record<string, any>;
 
       // Prepare update data (only include fields that are provided)
       const updateData: any = {};
@@ -89,6 +101,13 @@ export class TextController {
 
       // Get the updated document to return
       const updatedDoc = await this.firestoreService.getDocument('rawText', id);
+      
+      // Invalidate project cache if document belongs to a project
+      if (typedExistingDoc.project_id) {
+        const cacheKey = this.cacheService.generateProjectKey(typedExistingDoc.project_id);
+        await this.cacheService.delete(cacheKey);
+        console.log(`🔄 Invalidated cache for project: ${typedExistingDoc.project_id} after text edit`);
+      }
 
       return {
         success: true,
@@ -178,6 +197,11 @@ export class TextController {
 
       // Save to Firestore
       const docRef = await this.firestoreService.addDocument('rawText', textPayload);
+      
+      // Invalidate project cache
+      const cacheKey = this.cacheService.generateProjectKey(projectId);
+      await this.cacheService.delete(cacheKey);
+      console.log(`🔄 Invalidated cache for project: ${projectId} after CSV upload`);
       
       return {
         success: true,
@@ -277,6 +301,11 @@ export class TextController {
       // Save to Firestore
       const docRef = await this.firestoreService.addDocument('rawText', textPayload);
       
+      // Invalidate project cache
+      const cacheKey = this.cacheService.generateProjectKey(projectId);
+      await this.cacheService.delete(cacheKey);
+      console.log(`🔄 Invalidated cache for project: ${projectId} after PDF upload`);
+      
       return {
         success: true,
         id: docRef.id,
@@ -327,7 +356,17 @@ export class TextController {
           HttpStatus.NOT_FOUND
         );
       }
+      
+      // Type assertion to help TypeScript understand the document structure
+      const typedExistingDoc = existingDoc as Record<string, any>;
 
+      // Invalidate project cache if document belongs to a project
+      if (typedExistingDoc.project_id) {
+        const cacheKey = this.cacheService.generateProjectKey(typedExistingDoc.project_id);
+        await this.cacheService.delete(cacheKey);
+        console.log(`🔄 Invalidated cache for project: ${typedExistingDoc.project_id} after text deletion`);
+      }
+      
       // Delete the document
       await this.firestoreService.deleteDocument('rawText', id);
 
