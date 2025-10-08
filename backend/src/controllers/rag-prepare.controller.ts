@@ -11,6 +11,7 @@ import {
 import { ChunkingService } from '../services/chunking.service';
 import { KafkaProducerService } from '../kafka/producers/kafka-producer.service';
 import { FirestoreService } from '../services/firestore.service';
+import { CacheService } from '../services/cache.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Controller('rag')
@@ -21,6 +22,7 @@ export class RagPrepareController {
     private readonly chunkingService: ChunkingService,
     private readonly kafkaProducerService: KafkaProducerService,
     private readonly firestoreService: FirestoreService,
+    private readonly cacheService: CacheService,
   ) {}
 
 
@@ -55,6 +57,11 @@ export class RagPrepareController {
       const correlationId = uuidv4();
 
       this.logger.log(`🚀 Starting RAG preparation for project: ${projectId}`);
+      
+      // Invalidate project cache to ensure users see fresh data after RAG preparation
+      const cacheKey = this.cacheService.generateProjectKey(projectId);
+      await this.cacheService.delete(cacheKey);
+      this.logger.log(`🔄 Invalidated cache for project: ${projectId} before RAG preparation`);
       
       // Publish chunking initiation event to trigger the entire flow
       await this.kafkaProducerService.publishDocumentsChunked({
@@ -175,6 +182,11 @@ export class RagPrepareController {
       
       // Update the project in Firestore with embedding status
       const result = await this.firestoreService.updateProjectEmbeddingStatus(projectId, numberOfDocs);
+      
+      // Invalidate project cache to ensure users see the updated embedding status
+      const cacheKey = this.cacheService.generateProjectKey(projectId);
+      await this.cacheService.delete(cacheKey);
+      this.logger.log(`🔄 Invalidated cache for project: ${projectId} after RAG completion`);
       
       this.logger.log(`✅ Project ${projectId} updated successfully with embedding status`);
       
