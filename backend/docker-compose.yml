@@ -54,6 +54,38 @@ services:
     networks:
       - ragify-network
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: ragify-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - ragify-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: ragify-kibana
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - ragify-network
+
   ragify-backend:
     build:
       context: .
@@ -78,12 +110,17 @@ services:
       - KAFKA_CLIENT_ID=${KAFKA_CLIENT_ID}
       - KAFKA_BROKERS=kafka:9092
       - REDIS_URL=${REDIS_URL}
+      - ELASTICSEARCH_NODE=http://elasticsearch:9200
       
 
     networks:
       - ragify-network
     restart: unless-stopped
 
+
+volumes:
+  elasticsearch-data:
+    driver: local
 
 networks:
   ragify-network:

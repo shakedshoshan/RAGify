@@ -87,9 +87,15 @@ The system follows a modular architecture with clear separation of concerns:
    PINECONE_INDEX_NAME=your_pinecone_index_name
    PINECONE_INDEX_HOST=your_pinecone_index_host
 
+   # Elasticsearch Configuration
+   ELASTICSEARCH_NODE=http://localhost:9200
+
    # Kafka Configuration
    KAFKA_BROKERS=localhost:9092
    KAFKA_CLIENT_ID=ragify-backend
+
+   # Redis Configuration
+   REDIS_URL=redis://localhost:6379
 
    # Server Configuration
    PORT=5000
@@ -241,7 +247,12 @@ graph TD
 - `POST /text` - Create text document
 - `POST /text/upload-pdf` - Upload PDF document
 - `POST /text/upload-csv` - Upload CSV document
+- `PUT /text/:id` - Edit text document
 - `DELETE /text/:id` - Delete text document
+
+### Search
+- `GET /search/rawtexts` - Search rawText documents (query, project_id, from, size, sort, order)
+- `GET /search/suggest` - Get autocomplete suggestions (q, project_id)
 
 ### Chunking
 - `POST /chunking/project/:projectId` - Chunk project documents

@@ -21,9 +21,11 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "cache:inspect": "ts-node src/scripts/cache-inspect.ts",
     "cache:clear": "ts-node src/scripts/cache-clear.ts",
-    "cache:clear-projects": "ts-node src/scripts/cache-clear.ts --projects-only"
+    "cache:clear-projects": "ts-node src/scripts/cache-clear.ts --projects-only",
+    "elastic:migrate": "ts-node src/scripts/elasticsearch-migrate.ts"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^8.19.1",
     "@google-cloud/firestore": "^7.11.3",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",

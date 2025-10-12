@@ -18,6 +18,7 @@ import { FirestoreService } from '../services/firestore.service';
 import { CsvService } from '../services/csv.service';
 import { PdfService } from '../services/pdf.service';
 import { CacheService } from '../services/cache.service';
+import { ElasticsearchService } from '../services/elasticsearch.service';
 
 @Controller('text')
 export class TextController {
@@ -25,13 +26,21 @@ export class TextController {
     private readonly firestoreService: FirestoreService,
     private readonly csvService: CsvService,
     private readonly pdfService: PdfService,
-    private readonly cacheService: CacheService
+    private readonly cacheService: CacheService,
+    private readonly elasticsearchService: ElasticsearchService
   ) {}
 
   @Post()
   async createText(@Body() textPayloadDto: TextPayloadDto) {
     try {
       const docRef = await this.firestoreService.addDocument('rawText', textPayloadDto);
+      
+      // Index to Elasticsearch
+      try {
+        await this.elasticsearchService.indexRawText(docRef.id, textPayloadDto);
+      } catch (esError) {
+        console.error('Failed to index to Elasticsearch:', esError.message);
+      }
       
       // Invalidate project cache if a project_id is provided
       if (textPayloadDto.project_id) {
@@ -98,6 +107,13 @@ export class TextController {
 
       // Update the document
       await this.firestoreService.updateDocument('rawText', id, updateData);
+
+      // Update in Elasticsearch
+      try {
+        await this.elasticsearchService.updateRawText(id, updateData);
+      } catch (esError) {
+        console.error('Failed to update in Elasticsearch:', esError.message);
+      }
 
       // Get the updated document to return
       const updatedDoc = await this.firestoreService.getDocument('rawText', id);
@@ -197,6 +213,13 @@ export class TextController {
 
       // Save to Firestore
       const docRef = await this.firestoreService.addDocument('rawText', textPayload);
+      
+      // Index to Elasticsearch
+      try {
+        await this.elasticsearchService.indexRawText(docRef.id, textPayload);
+      } catch (esError) {
+        console.error('Failed to index CSV to Elasticsearch:', esError.message);
+      }
       
       // Invalidate project cache
       const cacheKey = this.cacheService.generateProjectKey(projectId);
@@ -301,6 +324,13 @@ export class TextController {
       // Save to Firestore
       const docRef = await this.firestoreService.addDocument('rawText', textPayload);
       
+      // Index to Elasticsearch
+      try {
+        await this.elasticsearchService.indexRawText(docRef.id, textPayload);
+      } catch (esError) {
+        console.error('Failed to index PDF to Elasticsearch:', esError.message);
+      }
+      
       // Invalidate project cache
       const cacheKey = this.cacheService.generateProjectKey(projectId);
       await this.cacheService.delete(cacheKey);
@@ -360,15 +390,22 @@ export class TextController {
       // Type assertion to help TypeScript understand the document structure
       const typedExistingDoc = existingDoc as Record<string, any>;
 
+      // Delete the document from Firestore
+      await this.firestoreService.deleteDocument('rawText', id);
+
+      // Delete from Elasticsearch
+      try {
+        await this.elasticsearchService.deleteRawText(id);
+      } catch (esError) {
+        console.error('Failed to delete from Elasticsearch:', esError.message);
+      }
+      
       // Invalidate project cache if document belongs to a project
       if (typedExistingDoc.project_id) {
         const cacheKey = this.cacheService.generateProjectKey(typedExistingDoc.project_id);
         await this.cacheService.delete(cacheKey);
         console.log(`🔄 Invalidated cache for project: ${typedExistingDoc.project_id} after text deletion`);
       }
-      
-      // Delete the document
-      await this.firestoreService.deleteDocument('rawText', id);
 
       return {
         success: true,

@@ -10,6 +10,7 @@ import { GenerationController } from './controllers/generation.controller';
 import { RagPrepareController } from './controllers/rag-prepare.controller';
 import { KafkaHealthController } from './controllers/kafka-health.controller';
 import { ApiKeyController } from './controllers/apikey.controller';
+import { SearchController } from './controllers/search.controller';
 import { FirestoreService } from './services/firestore.service';
 import { ProjectService } from './services/project.service';
 import { CsvService } from './services/csv.service';
@@ -21,8 +22,10 @@ import { GenerationService } from './services/generation.service';
 import { RetrievalService } from './services/retrieval.service';
 import { ApiKeyService } from './services/apikey.service';
 import { CacheService } from './services/cache.service';
+import { ElasticsearchService } from './services/elasticsearch.service';
 import firebaseConfig from './config/firebase.config';
 import pineconeConfig from './config/pinecone.config';
+import elasticsearchConfig from './config/elasticsearch.config';
 import { KafkaModule } from './kafka/kafka.module';
 import { RagConsumersModule } from './kafka/consumers/rag-consumers.module';
 import { KafkaHealthService } from './kafka/kafka-health.service';
@@ -32,14 +35,14 @@ import { KafkaHealthService } from './kafka/kafka-health.service';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [firebaseConfig, pineconeConfig],
+      load: [firebaseConfig, pineconeConfig, elasticsearchConfig],
     }),
     KafkaModule,
     RagConsumersModule,
   ],
-  controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, GenerationController, RagPrepareController, KafkaHealthController, ApiKeyController],
-  providers: [AppService, FirestoreService, ProjectService, CsvService, PdfService, ChunkingService, EmbeddingService, PineconeService, GenerationService, RetrievalService, ApiKeyService, CacheService],
-  exports: [ChunkingService, EmbeddingService, PineconeService, FirestoreService, ProjectService, CsvService, PdfService, GenerationService, RetrievalService, ApiKeyService, CacheService],
+  controllers: [AppController, TextController, ProjectController, ChunkingController, EmbeddingController, GenerationController, RagPrepareController, KafkaHealthController, ApiKeyController, SearchController],
+  providers: [AppService, FirestoreService, ProjectService, CsvService, PdfService, ChunkingService, EmbeddingService, PineconeService, GenerationService, RetrievalService, ApiKeyService, CacheService, ElasticsearchService],
+  exports: [ChunkingService, EmbeddingService, PineconeService, FirestoreService, ProjectService, CsvService, PdfService, GenerationService, RetrievalService, ApiKeyService, CacheService, ElasticsearchService],
 })
 export class AppModule implements OnModuleInit {
   constructor(private readonly kafkaHealthService: KafkaHealthService) {}
