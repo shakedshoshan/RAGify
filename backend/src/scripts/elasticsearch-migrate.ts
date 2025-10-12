@@ -77,36 +77,43 @@ async function migrateRawTexts() {
   // ==========================================
   // Configure Elasticsearch client with authentication
   
-  // Helper function to determine authentication method
+  // Helper function to determine authentication method for serverless
   function getClientAuthConfig() {
     if (process.env.ELASTICSEARCH_API_KEY) {
       return {
         apiKey: process.env.ELASTICSEARCH_API_KEY,
       };
-    } else if (process.env.ELASTICSEARCH_USERNAME && process.env.ELASTICSEARCH_PASSWORD) {
-      return {
-        username: process.env.ELASTICSEARCH_USERNAME,
-        password: process.env.ELASTICSEARCH_PASSWORD,
-      };
     }
     return undefined;
   }
   
-  // Connection URL or Cloud ID
-  const esUrl = process.env.ELASTICSEARCH_URL || 'http://localhost:9200';
+  // Connection configuration for serverless
   const cloudId = process.env.ELASTICSEARCH_CLOUD_ID;
+  const esUrl = process.env.ELASTICSEARCH_URL || 'http://localhost:9200';
+  
+  console.log(`Elasticsearch mode: ${cloudId ? 'Serverless' : 'Local'}`);
+  console.log(`API Key configured: ${!!process.env.ELASTICSEARCH_API_KEY}`);
   
   const esClient = new Client({
-    // Connection - use either direct URL or Cloud ID
-    node: esUrl,
-    cloud: cloudId ? { id: cloudId } : undefined,
+    // For Serverless: Use cloud ID, for local: use node URL
+    ...(cloudId 
+      ? { cloud: { id: cloudId } }
+      : { node: esUrl }
+    ),
     
-    // Authentication - use either API key or username/password
-    auth: getClientAuthConfig(),
+    // Authentication for Serverless (required)
+    ...(process.env.ELASTICSEARCH_API_KEY && {
+      auth: getClientAuthConfig()
+    }),
     
     // Client options
     maxRetries: 5,
     requestTimeout: 60000,
+    
+    // Serverless-specific settings
+    ...(cloudId && {
+      compression: true, // Enable compression for serverless
+    }),
   });
   
   // Define the index name
@@ -119,7 +126,13 @@ async function migrateRawTexts() {
     console.log(`Using index: ${indexName}`);
   } catch (error) {
     console.error('❌ Failed to connect to Elasticsearch:', error.message);
-    console.error('Make sure Elasticsearch is running on:', esUrl);
+    
+    if (error.message.includes('security_exception')) {
+      console.error('🔒 Authentication failed - Check your API key');
+      console.error('For Serverless: Ensure ELASTICSEARCH_API_KEY is set correctly');
+    }
+    
+    console.error('Make sure Elasticsearch is accessible');
     process.exit(1);
   }
 

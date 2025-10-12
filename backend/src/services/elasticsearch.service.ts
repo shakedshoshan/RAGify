@@ -67,21 +67,35 @@ export class ElasticsearchService implements OnModuleInit {
    * 
    * @param configService - NestJS ConfigService for accessing environment variables
    * 
-   * The client is configured with:
-   * - node/cloud: Connection details (URL or Cloud ID)
-   * - auth: Authentication credentials (API key or username/password)
-   * - maxRetries: Number of retry attempts for failed requests
-   * - requestTimeout: Maximum time to wait for a response
-   * - ssl: SSL/TLS settings
+   * For Elasticsearch Serverless:
+   * - Uses Cloud ID for connection
+   * - Requires API Key authentication
+   * - Enables SSL and compression
+   * 
+   * For local development:
+   * - Uses direct URL connection
+   * - No authentication required
    */
   constructor(private configService: ConfigService) {
     // Get all ES config from the config service
     const esConfig = this.configService.get('elasticsearch');
     
+    // Log configuration for debugging (without sensitive data)
+    const isServerless = !!process.env.ELASTICSEARCH_CLOUD_ID;
+    const hasApiKey = !!process.env.ELASTICSEARCH_API_KEY;
+    
+    this.logger.log(`Elasticsearch mode: ${isServerless ? 'Serverless' : 'Local'}`);
+    this.logger.log(`API Key configured: ${hasApiKey}`);
+    
+    if (isServerless && !hasApiKey) {
+      this.logger.error('❌ Elasticsearch Serverless requires API Key authentication');
+      this.logger.error('Please set ELASTICSEARCH_API_KEY environment variable');
+    }
+    
     // Initialize client with complete config
     this.client = new Client(esConfig);
     
-    // Set index name from environment or use default
+    // Set index name - for serverless, this must match your project setup
     this.indexName = process.env.ELASTICSEARCH_INDEX_NAME || 'search-ragify';
     
     this.logger.log(`Elasticsearch configured with index: ${this.indexName}`);
@@ -118,15 +132,19 @@ export class ElasticsearchService implements OnModuleInit {
    * The 'standard' analyzer tokenizes text and lowercases it, making search
    * case-insensitive and word-boundary aware.
    * 
-   * Note: For Elastic Cloud, you may need to create the index and mappings
-   * through the Kibana interface or API before running the application.
+   * Note: For Elasticsearch Serverless, you may need to create the index 
+   * through the Elastic Cloud console if automatic creation fails.
    */
   private async createIndexIfNotExists() {
     try {
+      this.logger.log(`Checking if index exists: ${this.indexName}`);
+      
       // Check if index already exists (prevents errors on restart)
       const indexExists = await this.client.indices.exists({ index: this.indexName });
       
       if (!indexExists) {
+        this.logger.log(`Creating index: ${this.indexName}`);
+        
         // Create the index with mappings
         await this.client.indices.create({
           index: this.indexName,
@@ -163,13 +181,30 @@ export class ElasticsearchService implements OnModuleInit {
         this.logger.log(`✅ Elasticsearch index already exists: ${this.indexName}`);
       }
     } catch (error) {
-      this.logger.error(`Failed to create index: ${error.message}, index: ${this.indexName}`);
-      // For Elastic Cloud, you might need to create the index manually
+      this.logger.error(`Failed to create/check index: ${this.indexName}`);
+      this.logger.error(`Error: ${error.message}`);
+      
+      // Handle specific serverless authentication errors
       if (error.message.includes('security_exception')) {
-        this.logger.warn('Authentication error - you may need to set up authentication credentials');
-        this.logger.warn('Check ELASTICSEARCH_USERNAME, ELASTICSEARCH_PASSWORD or ELASTICSEARCH_API_KEY');
+        this.logger.error('🔒 Authentication failed - Check your API key');
+        this.logger.error('For Serverless: Ensure ELASTICSEARCH_API_KEY is set correctly');
+        this.logger.error('API Key format should be base64-encoded string');
+      } else if (error.message.includes('forbidden')) {
+        this.logger.error('🚫 Permission denied - API key may lack required permissions');
+        this.logger.error('Required permissions: manage_index, write, read');
+      } else if (error.message.includes('resource_already_exists_exception')) {
+        this.logger.warn('Index already exists (race condition), continuing...');
+        return; // This is actually OK
       }
-      throw error;
+      
+      // Don't throw for serverless - the index might need to be created manually
+      const isServerless = !!process.env.ELASTICSEARCH_CLOUD_ID;
+      if (isServerless) {
+        this.logger.warn('⚠️ For Serverless, you may need to create the index manually');
+        this.logger.warn('Check your Elastic Cloud console for index management');
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -188,6 +223,8 @@ export class ElasticsearchService implements OnModuleInit {
    */
   async indexRawText(id: string, document: RawTextDocument): Promise<void> {
     try {
+      this.logger.debug(`Indexing document ${id} to index ${this.indexName}`);
+      
       await this.client.index({
         index: this.indexName,
         id, // Same ID as Firestore for consistency
@@ -203,6 +240,18 @@ export class ElasticsearchService implements OnModuleInit {
       this.logger.log(`✅ Indexed document: ${id}`);
     } catch (error) {
       this.logger.error(`Failed to index document ${id}: ${error.message}`);
+      
+      // Handle specific serverless errors
+      if (error.message.includes('security_exception')) {
+        this.logger.error('🔒 Authentication failed during indexing');
+        this.logger.error('Check ELASTICSEARCH_API_KEY is valid and has write permissions');
+      } else if (error.message.includes('index_not_found_exception')) {
+        this.logger.error(`📋 Index ${this.indexName} not found`);
+        this.logger.error('For Serverless: Create the index in Elastic Cloud console first');
+      } else if (error.message.includes('forbidden')) {
+        this.logger.error('🚫 API key lacks write permissions for this index');
+      }
+      
       throw error;
     }
   }
