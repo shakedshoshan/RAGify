@@ -1,83 +1,183 @@
-# RAGify - Automated RAG-as-a-Service Platform
+# RAGify 🚀
 
-## Project Overview
+### Automated RAG-as-a-Service Platform
 
-RAGify is a platform designed to simplify and automate the implementation of Retrieval-Augmented Generation (RAG) architectures. By providing an intuitive user interface, RAGify removes the technical barriers to entry, allowing users to transform their private data into a powerful, conversational API with just a few clicks.
+RAGify is a powerful platform designed to automate the creation of Retrieval-Augmented Generation (RAG) systems. It allows users to transform their documents into a production-ready, conversational API with minimal effort.
 
-The platform handles the entire RAG pipeline automatically: from data ingestion and processing to vector embedding and API generation. The result is a dedicated, ready-to-use API endpoint that can be integrated into any application, enabling powerful, context-aware AI interactions.
+---
 
-## Key Features
+## 🌟 Key Features
 
-### User & Project Management
-A dedicated user dashboard to manage multiple RAG projects, view usage statistics, and access unique API keys.
+- **Multi-Format Ingestion**: Support for PDF, CSV, and plain text documents.
+- **Intelligent Processing**: Advanced semantic, fixed-size, and hybrid chunking strategies.
+- **Event-Driven Architecture**: Highly scalable RAG pipeline powered by Apache Kafka.
+- **Instant API Generation**: Automatically generates a dedicated API endpoint and keys for your project.
+- **Custom Personas**: Tailor the LLM's response style, tone, and instructions.
+- **Modern Dashboard**: Intuitive React interface for project and API key management.
+- **Performance Caching**: Redis-backed project metadata caching for low-latency retrieval.
 
-### Diverse Data Ingestion
-Easily upload files (PDF, CSV, TXT), crawl websites via URL, integrate with external APIs (e.g., Notion, Slack), or simply paste text directly into the platform.
+---
 
-### Custom Persona Configuration
-Define the "personality" of your RAG model, including its tone, response style, and specific instructions, to ensure a tailored user experience.
+## 🏗️ Technology Stack
 
-### Automated Backend Pipeline
-The system automatically handles the complex backend processes:
+### 💻 Backend & Core
+- **Framework**: [NestJS](https://nestjs.com/) (TypeScript) - Modular, scalable server-side architecture.
+- **Messaging**: [Apache Kafka](https://kafka.apache.org/) - Handles asynchronous document processing pipelines.
+- **Caching**: [Redis](https://redis.io/) - Low-latency storage for API keys and project metadata.
 
-- **Parsing & Chunking**: Breaking down raw data into manageable, relevant text chunks.
-- **Embedding**: Converting each chunk into a numerical vector using a state-of-the-art embedding model.
-- **Vector Database Storage**: Storing vectors in a dedicated, high-performance vector database for efficient semantic search.
+### 💾 Data & Vector Storage
+- **Vector DB**: [Pinecone](https://www.pinecone.io/) - Specialized database for high-dimensional vector similarity search.
+- **Metadata**: [Firebase Firestore](https://firebase.google.com/docs/firestore) - NoSQL database for project and user data.
 
-### Instant API Generation
-Upon completion of the data processing, a unique API endpoint and key are automatically generated for immediate use.
+### 🤖 Artificial Intelligence
+- **Embeddings**: OpenAI `text-embedding-3-small` - Converts text into 512-dimensional vectors.
+- **Generation**: OpenAI `gpt-3.5-turbo` / `gpt-4` - Large Language Models for RAG responses.
 
-### Comprehensive API Usage
-The platform provides example code in multiple languages (Python, JavaScript, etc.) to demonstrate how to query the generated API. The API handles the entire RAG workflow, from vector search to LLM response generation.
+### 🎨 Frontend
+- **Library**: [React 19](https://react.dev/) with [Vite](https://vitejs.dev/) - Modern, fast reactive UI.
+- **State**: [Redux Toolkit](https://redux-toolkit.js.org/) - Robust state management for project flows.
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) - Utility-first styling for a clean, modern dashboard.
+- **Auth**: [Firebase Auth](https://firebase.google.com/docs/auth) - Secure, managed authentication.
 
-## Technology Stack
+### ☁️ Infrastructure & DevOps
+- **Cloud**: AWS (Amazon Web Services).
+- **IaC**: [Terraform](https://www.terraform.io/) - Automated provisioning of VPC, ECS, RDS, and IAM.
+- **Containerization**: [Docker](https://www.docker.com/) - Consistent development and deployment environments.
 
-### Backend
-- **Framework**: NestJS (TypeScript)
-- **API**: RESTful API for all platform functionalities.
+---
 
-### Frontend
-- **Framework**: Built with React, Next.js, or Vue.js to provide a modern and responsive user interface.
+## 🏗️ Architecture & System Design
 
-### Databases
-- **Standard Database**: FireStore for managing user accounts, project metadata, and API keys.
-- **Vector Database**: Pinecone, Weaviate, or ChromaDB for efficient storage and retrieval of vector embeddings.
+RAGify is built with a decoupled, event-driven architecture to ensure high availability and scalability. The system is split into several core components that interact via a robust messaging layer.
 
-### Cloud Infrastructure
-- **Provider**: AWS
-- **Infrastructure as Code**: Terraform is used to provision and manage the entire cloud environment, ensuring consistency and reproducibility.
+### 🌐 High-Level Overview
 
-### Models
-- **LLMs & Embedding Models**: Integration with various large language models and embedding models, including OpenAI, Anthropic, and Hugging Face.
+```mermaid
+graph TD
+    User([User]) <--> Frontend[React Dashboard]
+    User <--> API[NestJS API Gateway]
+    
+    subgraph "Messaging Layer (Apache Kafka)"
+        K1[DOCUMENTS_CHUNKED]
+        K2[CHUNKS_EMBEDDED]
+        K3[EMBEDDINGS_INGESTED]
+    end
 
-## Getting Started
+    subgraph "Processing Pipeline"
+        C1[Chunking Consumer] --> K1
+        C2[Embedding Consumer] --> K2
+        C3[Ingestion Consumer] --> K3
+    end
 
-To get started with RAGify, follow these steps:
+    subgraph "Storage & AI"
+        FS[(Firestore - Metadata)]
+        PC[(Pinecone - Vector DB)]
+        RD[(Redis - Cache)]
+        OA[OpenAI - Embeddings/GPT]
+    end
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/your-username/RAGify.git
-cd RAGify
+    API --> RD
+    API --> FS
+    C1 --> FS
+    C2 --> OA
+    C3 --> PC
+    API <--> OA
+    API <--> PC
 ```
 
-### 2. Set up the Backend
-Navigate to the backend directory and install dependencies.
-```bash
-cd backend
-npm install
+### 🧠 Core Components
+
+#### 1. API Gateway (NestJS)
+The central entry point for both the dashboard and external RAG queries. It handles project management, API key validation, and serves as the orchestrator for real-time RAG generation.
+
+#### 2. Event-Driven Pipeline (Apache Kafka)
+To handle heavy document processing without blocking the API, RAGify uses Kafka-based workers:
+- **Chunking Service**: Splits large documents into semantically meaningful chunks using recursive character splitting.
+- **Embedding Service**: Batches chunks and generates high-dimensional vectors via OpenAI's `text-embedding-3-small`.
+- **Ingestion Service**: Handles the final storage into Pinecone and performs metadata cleanup in Firestore.
+
+#### 3. Data & Vector Storage
+- **Firebase Firestore**: Stores project configurations, user metadata, and temporary document chunks.
+- **Pinecone Vector Database**: High-performance vector index with project-level namespacing for isolated and fast semantic searches.
+- **Redis Caching**: Caches project settings and API keys to minimize database lookups and ensure sub-100ms response times for query authorization.
+
+#### 4. The RAG Query Flow
+When a user queries the generated API:
+1. **Auth**: The `ApiKeyGuard` verifies the token against the Redis cache.
+2. **Retrieval**: The query is embedded, and a semantic search is performed in Pinecone to find the top-K relevant chunks.
+3. **Augmentation**: The retrieved context is combined with the user's prompt and any existing conversation history.
+4. **Generation**: OpenAI's GPT models generate a contextually accurate response based on the "Persona" defined for that project.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v18+)
+- Docker (for Kafka, Redis, and Backend)
+- Firebase Account (Firestore & Auth)
+- Pinecone Account
+- OpenAI API Key
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/shaked-shilo/RAGify.git
+   cd RAGify
+   ```
+
+2. **Backend Setup**
+   ```bash
+   cd backend
+   npm install
+   # Copy .env.example to .env and fill in your credentials
+   npm run dev
+   ```
+
+3. **Frontend Setup**
+   ```bash
+   cd ragify-frontend
+   npm install
+   # Configure Firebase environment variables
+   npm run dev
+   ```
+
+4. **Infrastructure (Optional)**
+   ```bash
+   cd terraform
+   terraform init
+   terraform apply
+   ```
+
+---
+
+## 📚 API Usage
+
+RAGify provides a dedicated generation endpoint for your projects.
+
+**Endpoint**: `POST /generation/generate`
+**Headers**: `Authorization: Bearer <YOUR_API_KEY>`
+
+**Payload**:
+```json
+{
+  "projectId": "your-project-id",
+  "prompt": "How does RAGify work?",
+  "topK": 5
+}
 ```
-Configure your environment variables (database connection strings, API keys, etc.).
 
-### 3. Set up the Frontend
-Navigate to the frontend directory and install dependencies.
-```bash
-cd frontend
-npm install
-```
+---
 
-### 4. Launch the Application
-Start both the backend and frontend servers.
+## 🛠️ Project Structure
 
-## License
+- `/backend`: NestJS API and Kafka consumers.
+- `/ragify-frontend`: React dashboard application.
+- `/terraform`: AWS infrastructure configuration.
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -6,14 +6,16 @@ RAGify Backend is a powerful NestJS-based API that enables users to create, mana
 
 ## 🚀 Purpose
 
-The RAGify Backend serves as the core engine for building RAG applications by providing:
+The RAGify Backend serves as the core engine for building RAG applications, featuring an **event-driven processing pipeline** powered by **Apache Kafka**. It provides:
 
 - **Document Processing**: Upload and process various document types (PDF, CSV, plain text)
-- **Intelligent Chunking**: Split documents into semantically meaningful chunks
-- **Vector Embeddings**: Generate embeddings using OpenAI's embedding models
-- **Vector Storage**: Store and manage embeddings in Pinecone vector database
-- **Semantic Search**: Retrieve relevant documents based on user queries
-- **AI-Powered Generation**: Generate responses using retrieved context and OpenAI's GPT models
+- **Intelligent Chunking**: Split documents into semantically meaningful chunks (Semantic, Fixed, Hybrid)
+- **Asynchronous Pipeline**: Kafka-based flow for scalable document processing
+- **Vector Embeddings**: Generate embeddings using OpenAI's models
+- **Vector Storage**: Manage embeddings in Pinecone
+- **Semantic Search & Retrieval**: Advanced retrieval with project isolation
+- **AI-Powered Generation**: GPT-powered responses with context and conversation history
+- **Metadata Caching**: Redis-backed caching for high performance
 
 ## 🏗️ Architecture
 

@@ -1,69 +1,65 @@
-# React + TypeScript + Vite
+# RAGify Frontend 🖥️
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+### React Dashbord for RAG Management
 
-Currently, two official plugins are available:
+The RAGify dashboard allows users to manage their RAG projects, upload documents, and generate API keys for their own RAG-as-a-Service applications.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🚀 Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Project Dashboard**: Create and manage multiple RAG instances.
+- **Document Management**: Upload PDFs, CSVs, and plain text with ease.
+- **API Key Control**: Generate, update, and revoke API keys for your projects.
+- **Project Configuration**: Set chunking parameters, choose models, and define custom AI personas.
+- **Usage Monitoring**: (Coming Soon) View RAG query stats and credit usage.
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+## 🏗️ Technology Stack
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **React 19**: Modern UI component architecture.
+- **Vite**: Ultra-fast build tool and development server.
+- **Tailwind CSS v4**: Utility-first CSS framework for modern styling.
+- **Redux Toolkit**: Efficient state management.
+- **React Router v7**: Declarative routing for a seamless single-page experience.
+- **Firebase Auth**: Secure user authentication.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 🛠️ Getting Started
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18+)
+- [npm](https://www.npmjs.com/)
+
+### Installation
+
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
+
+2. **Environment Variables**
+   Create a `.env` file in the `ragify-frontend` directory with your Firebase and API configuration:
+   ```env
+   VITE_FIREBASE_API_KEY=your_api_key
+   VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+   VITE_FIREBASE_PROJECT_ID=your_project_id
+   VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   VITE_FIREBASE_APP_ID=your_app_id
+   VITE_API_BASE_URL=http://localhost:5000
+   ```
+
+3. **Development Mode**
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
